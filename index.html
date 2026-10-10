@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Koblenz Telugu Families</title>
+<meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=Mandali&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<style>
+:root{
+  --bg:#eef1ec; --ink:#1c2a2f; --muted:#5b6a6e; --surface:#ffffff; --line:#d9e0dc;
+  --accent:#d9860b; --accent-ink:#ffffff; --dot:#c62f2a; --halo:#ffffff; --focus:#1f6f8b;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --telugu:"Mandali","Noto Sans Telugu",ui-sans-serif,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#11181b; --ink:#e7eeec; --muted:#9aaaae; --surface:#1f292d; --line:#33424a;
+  --accent:#f0a032; --accent-ink:#1a1206; --dot:#ff5a4f; --halo:#11181b; --focus:#7cc4dd; color-scheme:dark}
+  .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7)}
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden;padding:env(safe-area-inset-top,0) 0 0}
+[hidden]{display:none!important}
+.app{height:100%;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:8px 10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap;z-index:1000}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1}
+.brand h1{font-family:var(--display);font-size:19px;margin:0;line-height:1.1;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-size:12.5px}
+.brand small .te{font-family:var(--telugu);font-size:14px;color:var(--ink)}
+.search{flex-basis:100%;order:5;display:flex}
+@media (min-width:820px){.search{flex-basis:260px;order:0}}
+.search input{border-radius:999px;padding:7px 14px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px}
+button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+.ghost{background:transparent}
+.link{background:none;border:0;padding:0;color:var(--focus);text-decoration:underline}
+.danger{color:var(--dot);border-color:var(--dot);background:transparent}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 10px;border-radius:999px}
+.chip .d{width:8px;height:8px;border-radius:50%;background:var(--dot)}
+.stage{position:relative;flex:1;min-height:0}
+#map{position:absolute;inset:0;background:var(--bg)}
+.leaflet-container{font-family:var(--body)}
+.placing #map{cursor:crosshair}
+.overlay{position:absolute;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(3px)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;width:min(380px,100%);max-height:100%;overflow:auto;box-shadow:0 12px 32px rgba(0,0,0,.15)}
+.card h2{font-family:var(--display);font-size:20px;margin:0 0 4px}
+.card p{margin:0 0 12px;color:var(--muted);font-size:14px}
+#sheet{position:absolute;left:0;right:0;bottom:0;max-height:78%;overflow:auto;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.12);padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));z-index:1200}
+@media (min-width:820px){#sheet{left:auto;top:0;width:380px;max-height:none;border-radius:0;border-top:0;border-left:1px solid var(--line)}}
+.sheet-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.sheet-head h2{font-family:var(--display);font-size:20px;margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
+.sheet-head .sub{display:block;font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400;margin-top:2px}
+.x{width:36px;height:36px;padding:0;font-size:18px;flex:none}
+.msg{border:1px solid var(--dot);border-radius:12px;padding:10px 12px;margin-bottom:12px;background:color-mix(in srgb,var(--dot) 7%,var(--surface))}
+.msg .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--dot);font-weight:700}
+.msg p{margin:4px 0 2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg .when{font-size:12.5px;color:var(--muted)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+dt{color:var(--muted);font-size:13px}
+dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.inline .small{padding:3px 8px;font-size:12.5px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.note{font-size:13px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}
+.note b{color:var(--ink)}
+form{display:flex;flex-direction:column;gap:12px}
+fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:12px;min-width:0}
+legend{font-family:var(--display);font-size:15px;font-weight:700;padding:0;margin-bottom:2px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.opt{font-size:11.5px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%}
+textarea{resize:vertical;min-height:64px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.langs{display:flex;flex-wrap:wrap;gap:8px 14px}
+.langs label{flex-direction:row;align-items:center;gap:6px;color:var(--ink);font-size:14px}
+.langs input{width:auto}
+.err{color:var(--dot);font-size:13px;min-height:1em}
+.ok{color:var(--ink);font-size:13px}
+.list{display:flex;flex-direction:column;gap:8px}
+.list button{text-align:left;display:flex;flex-direction:column;gap:2px}
+.list b{font-family:var(--display)}
+.list span{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.placebar{position:absolute;left:16px;right:16px;top:12px;margin:0 auto;max-width:460px;background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:1300}
+.placebar p{margin:0;font-size:14px}
+.placebar .actions{margin:0}
+.sugg{display:flex;flex-direction:column;gap:4px;max-height:170px;overflow:auto}
+.sugg button{text-align:left;padding:6px 10px;font-size:14px}
+.placed{font-size:13.5px;color:var(--muted)}
+.placed.yes{color:var(--ink)}
+.toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13.5px;z-index:2000;max-width:calc(100% - 32px);text-align:center}
+.empty{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;width:min(320px,calc(100% - 32px));text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.empty h2{font-family:var(--display);font-size:17px;margin:0 0 6px}
+.empty p{margin:0 0 12px;color:var(--muted);font-size:14px}
+/* flag markers */
+.flag{position:relative;width:0;height:0}
+.flag .pole{position:absolute;left:-1px;bottom:-2px;width:2px;height:30px;background:var(--ink);border-radius:1px}
+.flag .pen{position:absolute;left:1px;bottom:12px;width:18px;height:12px;background:var(--accent);clip-path:polygon(0 0,100% 50%,0 100%)}
+.flag .base{position:absolute;left:-3.5px;bottom:-5px;width:7px;height:7px;border-radius:50%;background:var(--ink)}
+.flag .nm{position:absolute;left:22px;bottom:9px;white-space:nowrap;font-weight:700;font-size:13px;color:var(--ink);text-shadow:0 0 3px var(--halo),0 0 3px var(--halo),0 0 2px var(--halo)}
+.flag .dot{position:absolute;left:12px;bottom:23px;width:11px;height:11px;border-radius:50%;background:var(--dot);border:1.5px solid var(--halo)}
+.flag .dot.read{background:var(--halo);border:2px solid var(--dot);width:10px;height:10px}
+.flag .dot.unread::after{content:"";position:absolute;inset:-2px;border-radius:50%;background:var(--dot);animation:pulse 1.8s ease-out infinite}
+.flag.mine .pen{outline:1.5px solid var(--ink)}
+.flag.temp .pen{background:var(--accent);filter:drop-shadow(0 0 4px var(--accent))}
+@keyframes pulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(2.4)}}
+@media (prefers-reduced-motion:reduce){.flag .dot.unread::after{animation:none;opacity:0}}
+.flag-icon{background:none;border:0}
+</style>
+</head>
+<body>
+<!--
+  ============ SETUP ============
+  Paste your Firebase web config below (Firebase console → Project settings → Your apps → Web app).
+  It is safe to publish: access is controlled by the Firestore security rules, not by hiding this.
+-->
+<script>
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCrzzLPyHK0anQXJkAAWDngXcjrJCgXSfA",
+  authDomain: "telugu-community-map.firebaseapp.com",
+  projectId: "telugu-community-map",
+  storageBucket: "telugu-community-map.firebasestorage.app",
+  messagingSenderId: "534645925884",
+  appId: "1:534645925884:web:5d2178c5d0a878f84eb479",
+  measurementId: "G-ZREQ0LK4HV"
+};
+</script>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Koblenz Telugu Families</h1>
+      <small><span class="te">మన కుటుంబాలు</span> · Koblenz &amp; around</small>
+    </div>
+    <div class="search" id="searchWrap" hidden><input id="q" type="search" placeholder="Search families, jobs, interests…" aria-label="Search families" autocomplete="off"></div>
+    <button id="msgsBtn" class="chip ghost" type="button" hidden><span class="d"></span><span id="msgsCount"></span></button>
+    <button id="mineBtn" class="primary" type="button" hidden>Add my family</button>
+    <button id="infoBtn" class="ghost" type="button" aria-label="About and account">?</button>
+  </header>
+  <div class="stage" id="stage">
+    <div id="map" aria-label="Map of Koblenz with family flags"></div>
+    <div id="empty" class="empty" hidden></div>
+    <div id="placebar" class="placebar" hidden>
+      <p><b>Find your home.</b> Search your address, or tap your house on the map. You can drag the flag to fine-tune.</p>
+      <div class="inline" style="flex-wrap:nowrap"><input id="p-addr" type="search" placeholder="e.g. Löhrstraße 12, Koblenz" autocomplete="off" aria-label="Search your address"><button id="p-go" type="button">Search</button></div>
+      <div id="p-sugg" class="sugg"></div>
+      <div class="actions"><button id="p-loc" type="button">Use my location</button><button id="p-done" class="primary" type="button" disabled>Done</button><button id="p-cancel" type="button">Cancel</button></div>
+    </div>
+    <div id="toast" class="toast" hidden></div>
+    <aside id="sheet" hidden></aside>
+    <div id="auth" class="overlay" hidden></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ---------- constants ----------
+const KOBLENZ=[50.356,7.594];
+const LANGS=["Telugu","German","English","Hindi","Tamil","Kannada"];
+const DAYS=[1,3,5,7,14];
+const $=id=>document.getElementById(id);
+const sheet=$("sheet");
+
+// ---------- helpers ----------
+function h(tag,props,...kids){const e=document.createElement(tag);if(props)for(const k in props){const v=props[k];if(v==null||v===false)continue;if(k==="class")e.className=v;else if(k.startsWith("on"))e[k]=v;else e.setAttribute(k,v===true?"":v)}for(const c of kids){if(c==null)continue;e.append(c.nodeType?c:String(c))}return e}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const now=()=>Date.now();
+const activeMsg=f=>f&&f.message&&f.message.text&&f.message.expiresAt>now()?f.message:null;
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2800)}
+function fmtLeft(ms){const hrs=Math.round(ms/3600000);if(hrs<24)return `${Math.max(1,hrs)} hour${hrs===1?"":"s"} left`;const d=Math.round(hrs/24);return `${d} day${d>1?"s":""} left`}
+function fmtDate(ts){try{return new Date(ts).toLocaleDateString(undefined,{day:"numeric",month:"short"})}catch(e){return""}}
+function norm(s){return String(s||"").toLowerCase().replace(/ß/g,"ss").replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
+function copyRow(text){const span=h("span",{style:"user-select:all"},text);const btn=h("button",{type:"button",class:"small",onclick:async()=>{try{await navigator.clipboard.writeText(text);btn.textContent="Copied"}catch(e){btn.textContent="Copy failed"}}},"Copy");return h("div",{class:"inline"},span,btn)}
+function head(title,sub){return h("div",{class:"sheet-head"},h("h2",null,title,sub?h("span",{class:"sub"},sub):null),h("button",{class:"x ghost",type:"button","aria-label":"Close",onclick:closeSheet},"✕"))}
+function openSheet(){sheet.hidden=false;sheet.textContent="";sheet.scrollTop=0}
+function closeSheet(){sheet.hidden=true;sheet.textContent="";openId=null}
+
+// ---------- map ----------
+const map=L.map("map",{zoomControl:true,attributionControl:true}).setView(KOBLENZ,13);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+map.zoomControl.setPosition("bottomleft");
+
+// ---------- config check ----------
+const cfg=window.FIREBASE_CONFIG||{};
+if(!cfg.apiKey||cfg.apiKey.startsWith("PASTE")){
+  const a=$("auth");a.hidden=false;a.append(h("div",{class:"card"},h("h2",null,"Almost ready"),h("p",null,"Paste your Firebase config into index.html (near the top, inside FIREBASE_CONFIG), then reload. See SETUP.md.")));
+  throw new Error("Firebase config missing");
+}
+const app=initializeApp(cfg), auth=getAuth(app), db=getFirestore(app);
+
+// ---------- state ----------
+let me=null, isAdmin=false, families=new Map(), seen={}, openId=null, placing=null;
+const markers=new Map(); let unsubs=[];
+
+// ---------- auth UI ----------
+function showAuth(mode="login",msg=""){
+  const a=$("auth");a.hidden=false;a.textContent="";
+  const email=h("input",{type:"email",id:"a-email",autocomplete:"email",required:true});
+  const pw=h("input",{type:"password",id:"a-pw",autocomplete:mode==="signup"?"new-password":"current-password",minlength:6,required:true});
+  const err=h("div",{class:msg?"ok":"err",role:"alert"},msg);
+  const form=h("form",{novalidate:true},
+    h("label",{for:"a-email"},"Email",email),
+    mode!=="reset"?h("label",{for:"a-pw"},mode==="signup"?"Choose a password (at least 6 characters)":"Password",pw):null,
+    err,
+    h("button",{class:"primary",type:"submit"},mode==="signup"?"Create account":mode==="reset"?"Send reset email":"Log in"));
+  form.onsubmit=async e=>{
+    e.preventDefault();err.className="err";err.textContent="";
+    const em=email.value.trim();if(!em){err.textContent="Enter your email.";return}
+    const btn=form.querySelector("button[type=submit]");btn.disabled=true;
+    try{
+      if(mode==="reset"){await sendPasswordResetEmail(auth,em);showAuth("login","Check your inbox for a link to reset your password.");return}
+      if(mode==="signup")await createUserWithEmailAndPassword(auth,em,pw.value);
+      else await signInWithEmailAndPassword(auth,em,pw.value);
+    }catch(x){btn.disabled=false;err.textContent=authError(x&&x.code)}
+  };
+  const switcher=mode==="login"
+    ?h("p",{style:"margin:12px 0 0"},"New here? ",h("button",{class:"link",type:"button",onclick:()=>showAuth("signup")},"Create an account")," · ",h("button",{class:"link",type:"button",onclick:()=>showAuth("reset")},"Forgot password?"))
+    :h("p",{style:"margin:12px 0 0"},h("button",{class:"link",type:"button",onclick:()=>showAuth("login")},"Back to log in"));
+  a.append(h("div",{class:"card"},
+    h("h2",null,mode==="signup"?"Join the community map":mode==="reset"?"Reset your password":"Welcome"),
+    h("p",null,"See Telugu families living near you in Koblenz and around, and connect with them."),
+    form,switcher,
+    h("div",{class:"note"},h("b",null,"Why do I need to log in? "),"The map shows where families live, so it's only visible to members who log in. Logging in also makes sure only you can change your own family's flag.")));
+  setTimeout(()=>email.focus(),50);
+}
+function authError(code){return({
+  "auth/invalid-credential":"Wrong email or password.","auth/wrong-password":"Wrong email or password.","auth/user-not-found":"No account with this email. Create one instead.",
+  "auth/email-already-in-use":"This email already has an account. Log in instead.","auth/weak-password":"Use at least 6 characters for the password.",
+  "auth/invalid-email":"That email address doesn't look right.","auth/too-many-requests":"Too many tries. Wait a few minutes and try again.",
+  "auth/network-request-failed":"No internet connection. Try again."}[code]||"Something went wrong. Please try again.")}
+
+onAuthStateChanged(auth,async user=>{
+  unsubs.forEach(u=>u());unsubs=[];families.clear();redrawFlags();closeSheet();
+  if(!user){me=null;isAdmin=false;$("mineBtn").hidden=true;$("msgsBtn").hidden=true;$("searchWrap").hidden=true;$("empty").hidden=true;showAuth();return}
+  me=user.uid;$("auth").hidden=true;$("searchWrap").hidden=false;
+  try{isAdmin=(await getDoc(doc(db,"admins",me))).exists()}catch(e){isAdmin=false}
+  unsubs.push(onSnapshot(collection(db,"families"),snap=>{
+    const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));families=m;refresh();
+    if(openId&&!families.has(openId))closeSheet();
+  },()=>toast("Couldn't load the families. Reload to try again.")));
+  unsubs.push(onSnapshot(doc(db,"seen",me),s=>{seen=s.exists()&&s.data().seen?{...s.data().seen}:{};refresh()},()=>{}));
+});
+
+// ---------- flags ----------
+function flagIcon(f,{temp=false}={}){
+  const m=activeMsg(f);let dot="";
+  if(m&&!temp)dot=`<span class="dot ${seen[f.id]===m.postedAt?"read":"unread"}"></span>`;
+  return L.divIcon({className:"flag-icon",iconSize:[0,0],iconAnchor:[0,0],
+    html:`<div class="flag${f.id===me?" mine":""}${temp?" temp":""}"><span class="pole"></span><span class="pen"></span><span class="base"></span>${dot}<span class="nm">${esc(f.name||"Your flag")}</span></div>`});
+}
+function redrawFlags(){
+  for(const [id,mk] of markers)if(!families.has(id)){mk.remove();markers.delete(id)}
+  for(const f of families.values()){
+    if(typeof f.lat!=="number"||typeof f.lng!=="number")continue;
+    if(placing&&placing.id===f.id){const mk=markers.get(f.id);if(mk){mk.remove();markers.delete(f.id)}continue}
+    let mk=markers.get(f.id);
+    if(!mk){mk=L.marker([f.lat,f.lng],{icon:flagIcon(f),keyboard:true,title:f.name||"Family",riseOnHover:true}).addTo(map);mk.on("click",()=>{if(!placing)openFamily(f.id)});markers.set(f.id,mk)}
+    else{mk.setLatLng([f.lat,f.lng]);mk.setIcon(flagIcon(f));mk.off("click");mk.on("click",()=>{if(!placing)openFamily(f.id)})}
+  }
+}
+function refresh(){
+  redrawFlags();
+  const act=[...families.values()].filter(f=>activeMsg(f)),unread=act.filter(f=>seen[f.id]!==f.message.postedAt).length;
+  $("msgsBtn").hidden=!me||act.length===0;
+  $("msgsCount").textContent=unread?`${unread} new message${unread>1?"s":""}`:`${act.length} message${act.length>1?"s":""}`;
+  $("msgsBtn").querySelector(".d").style.visibility=unread?"visible":"hidden";
+  const mb=$("mineBtn");mb.hidden=!me;mb.textContent=families.has(me)?"My family":"Add my family";
+  const e=$("empty");
+  if(me&&families.size===0){e.hidden=false;e.textContent="";e.append(h("h2",null,"No families on the map yet"),h("p",null,"Be the first: add your family and put your flag on your home."),h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Add my family"))}
+  else e.hidden=true;
+}
+setInterval(()=>{if(families.size)refresh()},60000);
+function focusFamily(f){if(typeof f.lat==="number")map.setView([f.lat,f.lng],Math.max(map.getZoom(),16))}
+
+async function markSeen(f){
+  const m=activeMsg(f);if(!m||!me||seen[f.id]===m.postedAt)return;
+  seen={...seen,[f.id]:m.postedAt};refresh();
+  const keep={};for(const id in seen){const g=families.get(id);if(g&&activeMsg(g))keep[id]=seen[id]}
+  try{await setDoc(doc(db,"seen",me),{seen:keep})}catch(e){}
+}
+
+// ---------- details ----------
+function openFamily(id){
+  const f=families.get(id);if(!f)return;openId=id;openSheet();
+  sheet.append(head(f.name||"Family"));
+  const m=activeMsg(f);
+  if(m)sheet.append(h("div",{class:"msg"},h("div",{class:"lbl"},"Message to the community"),h("p",null,m.text),h("div",{class:"when"},`Posted ${fmtDate(m.postedAt)} · ${fmtLeft(m.expiresAt-now())}`)));
+  const dl=h("dl"),add=(k,v)=>{if(v==null||v==="")return;dl.append(h("dt",null,k),h("dd",null,v))};
+  if(f.address)add("Address",copyRow(f.address));
+  add("What we do",f.profession);add("Interests",f.interests);
+  if(f.members||f.kids)add("Family",[f.members?`${f.members} member${f.members>1?"s":""}`:null,f.kids?`${f.kids} kid${f.kids>1?"s":""}`:null].filter(Boolean).join(" · "));
+  if(f.languages&&f.languages.length)add("Languages",f.languages.join(", "));
+  add("About us",f.about);
+  if(f.contact)add("Contact",copyRow(f.contact));
+  sheet.append(dl.children.length?dl:h("p",{class:"note"},"This family hasn't shared more details yet."));
+  sheet.append(h("p",{style:"margin:12px 0 0"},h("a",{href:`https://www.openstreetmap.org/directions?to=${f.lat}%2C${f.lng}`,target:"_blank",rel:"noopener"},"Directions to this flag ↗")));
+  const acts=h("div",{class:"actions"});
+  if(id===me)acts.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Edit my family"));
+  else if(isAdmin)acts.append(h("button",{type:"button",onclick:()=>openForm(id)},"Edit (admin)"),h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Remove pin"));
+  if(acts.children.length)sheet.append(acts);
+  markSeen(f);
+}
+function confirmRemove(id){
+  const f=families.get(id);if(!f)return;openSheet();
+  sheet.append(head("Remove this flag?"),h("p",null,`"${f.name||"Family"}" and their message will be removed from the map for everyone.`),
+    h("div",{class:"actions"},
+      h("button",{class:"danger",type:"button",onclick:async e=>{e.target.disabled=true;try{await deleteDoc(doc(db,"families",id));closeSheet();toast("Flag removed")}catch(x){e.target.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove"),
+      h("button",{type:"button",onclick:()=>id===me?openForm(id):openFamily(id)},"Cancel")));
+}
+$("msgsBtn").onclick=()=>{
+  openSheet();openId=null;sheet.append(head("Community messages","Tap one to see the family"));
+  const list=h("div",{class:"list"});
+  for(const f of [...families.values()].filter(f=>activeMsg(f)).sort((a,b)=>b.message.postedAt-a.message.postedAt)){
+    const unread=seen[f.id]!==f.message.postedAt;
+    list.append(h("button",{type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},h("b",null,(unread?"● ":"")+(f.name||"Family")),h("span",null,f.message.text.length>90?f.message.text.slice(0,90)+"…":f.message.text)));
+  }
+  sheet.append(list);
+};
+$("mineBtn").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
+$("infoBtn").onclick=()=>{
+  openSheet();openId=null;sheet.append(head("About this map"),
+    h("p",null,"A members-only map for Telugu families in Koblenz and nearby towns, so you can see who lives close by and say hello."),
+    h("div",{class:"note"},h("b",null,"Why log in? "),"The map shows where families live, so only logged-in members can see it. Logging in also makes sure only you can change your family's flag. The admin can edit or remove any flag to keep the map tidy."),
+    h("div",{class:"note"},h("b",null,"Your privacy. "),"You choose where your flag goes. Address, contact and all other details are optional, and you can edit or delete your flag at any time."),
+    h("div",{class:"note"},h("b",null,"Messages. "),"Post a short message with your flag. A red dot appears on your flag for everyone, turns into a ring once they've read it, and disappears after the days you choose."));
+  if(me)sheet.append(h("p",{class:"note"},"Logged in as ",h("b",null,auth.currentUser&&auth.currentUser.email||""),isAdmin?" (admin)":""),
+    h("details",null,h("summary",{style:"font-size:13px;color:var(--muted)"},"Your user ID (for admin setup)"),copyRow(me)),
+    h("div",{class:"actions"},h("button",{type:"button",onclick:()=>signOut(auth)},"Log out")));
+};
+
+// ---------- family search ----------
+let qTimer=0;
+$("q").addEventListener("input",()=>{clearTimeout(qTimer);qTimer=setTimeout(runSearch,150)});
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();runSearch()}});
+function runSearch(){
+  const raw=$("q").value.trim(),q=norm(raw);if(!q){if(sheet.dataset.mode==="search"){closeSheet();sheet.dataset.mode=""}return}
+  const terms=q.split(" ");
+  const hits=[...families.values()].filter(f=>{const hay=norm([f.name,f.profession,f.interests,f.about,(f.languages||[]).join(" "),f.address].filter(Boolean).join(" "));return terms.every(t=>hay.includes(t))});
+  openSheet();openId=null;sheet.dataset.mode="search";
+  sheet.append(head(hits.length?`${hits.length} famil${hits.length>1?"ies":"y"} found`:"No families found",`for "${raw}"`));
+  const list=h("div",{class:"list"});
+  for(const f of hits)list.append(h("button",{type:"button",onclick:()=>{sheet.dataset.mode="";focusFamily(f);openFamily(f.id)}},h("b",null,f.name||"Family"),h("span",null,[f.profession,f.interests].filter(Boolean).join(" · ")||"No details yet")));
+  if(!hits.length)list.append(h("p",{class:"note"},"Try a shorter word, like a first name, a job or an interest."));
+  sheet.append(list);
+}
+
+// ---------- placing the flag ----------
+let tempMarker=null;
+function setTemp(lat,lng,label){
+  placing.pos=[lat,lng];if(label!==undefined)placing.addr=label;
+  if(!tempMarker){tempMarker=L.marker([lat,lng],{icon:flagIcon({name:placing.name},{temp:true}),draggable:true,zIndexOffset:1000}).addTo(map);
+    tempMarker.on("dragend",()=>{const p=tempMarker.getLatLng();placing.pos=[p.lat,p.lng]})}
+  else tempMarker.setLatLng([lat,lng]);
+  $("p-done").disabled=false;
+}
+function onMapClick(e){if(placing)setTemp(e.latlng.lat,e.latlng.lng,null)}
+map.on("click",onMapClick);
+function startPlacing(id,name,pos,onDone){
+  placing={id,name:name||"Your flag",pos:null,addr:null,onDone};
+  sheet.hidden=true;$("placebar").hidden=false;$("stage").classList.add("placing");
+  $("p-addr").value="";$("p-sugg").textContent="";$("p-done").disabled=true;
+  redrawFlags();
+  if(pos){setTemp(pos[0],pos[1]);map.setView(pos,Math.max(map.getZoom(),17))}
+}
+function endPlacing(ok){
+  const p=placing;placing=null;if(tempMarker){tempMarker.remove();tempMarker=null}
+  $("placebar").hidden=true;$("stage").classList.remove("placing");sheet.hidden=false;redrawFlags();
+  if(ok&&p&&p.pos)p.onDone(p.pos,p.addr);
+}
+$("p-done").onclick=()=>endPlacing(true);
+$("p-cancel").onclick=()=>endPlacing(false);
+$("p-go").onclick=addrSearch;
+$("p-addr").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addrSearch()}});
+let lastGeo=0;
+async function addrSearch(){
+  const q=$("p-addr").value.trim(),box=$("p-sugg");box.textContent="";
+  if(q.length<3){box.append(h("span",{class:"placed"},"Type your street and house number."));return}
+  const wait=Math.max(0,1100-(now()-lastGeo));if(wait)await new Promise(r=>setTimeout(r,wait));lastGeo=now();
+  box.append(h("span",{class:"placed"},"Searching…"));
+  try{
+    const u=new URL("https://nominatim.openstreetmap.org/search");
+    u.search=new URLSearchParams({q,format:"jsonv2",countrycodes:"de",viewbox:"7.20,50.55,7.95,50.15",bounded:"0",limit:"6",addressdetails:"1","accept-language":"de"}).toString();
+    const r=await fetch(u);if(!r.ok)throw new Error(r.status);const res=await r.json();box.textContent="";
+    if(!res.length){box.append(h("span",{class:"placed"},"No match. Check the spelling, or tap your house on the map."));return}
+    for(const x of res){const a=x.address||{};
+      const label=[[a.road||a.pedestrian||a.footway,a.house_number].filter(Boolean).join(" "),[a.postcode,a.city||a.town||a.village||a.suburb].filter(Boolean).join(" ")].filter(Boolean).join(", ")||x.display_name.split(",").slice(0,3).join(",");
+      box.append(h("button",{type:"button",onclick:()=>{setTemp(+x.lat,+x.lon,label);map.setView([+x.lat,+x.lon],18);box.textContent="";$("p-addr").value=label}},label))}
+  }catch(e){box.textContent="";box.append(h("span",{class:"placed"},"Address search is not available right now. Tap your house on the map instead."))}
+}
+$("p-loc").onclick=()=>{
+  if(!navigator.geolocation){toast("Location isn't available on this device.");return}
+  $("p-loc").disabled=true;
+  navigator.geolocation.getCurrentPosition(p=>{$("p-loc").disabled=false;setTemp(p.coords.latitude,p.coords.longitude,null);map.setView([p.coords.latitude,p.coords.longitude],18);toast("Check the flag sits on your house, then tap Done.")},
+    ()=>{$("p-loc").disabled=false;toast("Couldn't get your location. Search your address instead.")},{enableHighAccuracy:true,timeout:12000});
+};
+
+// ---------- form ----------
+function openForm(id){
+  if(!id)return;const f=families.get(id)||{},editingOther=id!==me;
+  openSheet();openId=null;sheet.dataset.mode="";
+  sheet.append(head(editingOther?"Edit family (admin)":families.has(id)?"Edit my family":"Add my family",editingOther?null:"Only you and the admin can change this"));
+  const v=x=>x==null?"":String(x);
+  const inp=(idn,label,val,o={},opt=true)=>{const i=h(o.tag||"input",Object.assign({id:idn},o.tag?{}:{type:o.type||"text"},o.extra||{}));i.value=val;return h("label",{for:idn},h("span",null,label,opt?h("span",{class:"opt"}," (optional)"):null),i)};
+  let pos=typeof f.lat==="number"?[f.lat,f.lng]:null;
+  const err=h("div",{class:"err",role:"alert"});
+  const placedTxt=h("span",{class:"placed"}),placeBtn=h("button",{type:"button"});
+  const sync=()=>{placedTxt.textContent=pos?"✓ Flag placed":"Not placed yet";placedTxt.className="placed"+(pos?" yes":"");placeBtn.textContent=pos?"Move my flag":"Place my flag on the map";placeBtn.className=pos?"":"primary"};
+  placeBtn.onclick=()=>startPlacing(id,$("f-name").value.trim()||f.name,pos,(p,addr)=>{pos=p;sync();err.textContent="";const a=$("f-addr");if(addr&&!a.value.trim())a.value=addr});
+  sync();
+  const langs=h("div",{class:"langs"});
+  for(const l of LANGS){const c=h("input",{type:"checkbox",id:"lang-"+l,value:l});c.checked=(f.languages||[]).includes(l);langs.append(h("label",{for:"lang-"+l},c,l))}
+  const m=activeMsg(f);
+  const daySel=h("select",{id:"f-days"});for(const d of DAYS){const o=h("option",{value:d},`${d} day${d>1?"s":""}`);if((m?m.days:3)===d)o.selected=true;daySel.append(o)}
+  const form=h("form",{novalidate:true},
+    h("fieldset",null,h("legend",null,"Your flag"),
+      inp("f-name","Family or display name",v(f.name),{extra:{maxlength:40,placeholder:"e.g. Rao family"}},false),
+      h("div",{class:"inline"},placeBtn,placedTxt),
+      inp("f-addr","Address",v(f.address),{extra:{maxlength:120,placeholder:"e.g. Löhrstraße 12, 56068 Koblenz"}}),
+      h("p",{class:"note",style:"margin:0"},"Only add your address if you're happy for all members to see it.")),
+    h("fieldset",null,h("legend",null,"About you"),
+      inp("f-prof","What you do",v(f.profession),{extra:{maxlength:80,placeholder:"e.g. IT, student, doctor"}}),
+      inp("f-int","Interests",v(f.interests),{extra:{maxlength:120,placeholder:"e.g. cricket, cooking, festivals"}}),
+      h("div",{class:"row2"},inp("f-mem","Family members",v(f.members),{type:"number",extra:{min:1,max:20,inputmode:"numeric"}}),inp("f-kids","Kids",v(f.kids),{type:"number",extra:{min:0,max:15,inputmode:"numeric"}})),
+      h("div",null,h("div",{style:"font-size:13px;color:var(--muted);margin-bottom:6px"},"Languages ",h("span",{class:"opt"},"(optional)")),langs),
+      inp("f-about","About us",v(f.about),{tag:"textarea",extra:{maxlength:200,rows:2}}),
+      inp("f-contact","Contact (phone, WhatsApp or email)",v(f.contact),{extra:{maxlength:80}}),
+      h("p",{class:"note",style:"margin:0"},"Only share contact details you're happy for every member to see.")),
+    h("fieldset",null,h("legend",null,"Message to the community"),
+      inp("f-msg","Message",m?m.text:"",{tag:"textarea",extra:{maxlength:240,rows:2,placeholder:"e.g. Bathukamma get-together on Saturday, all welcome!"}}),
+      h("label",{for:"f-days"},h("span",null,"Show the red dot for"),daySel)),
+    err,
+    h("div",{class:"actions"},h("button",{class:"primary",type:"submit"},"Save"),h("button",{type:"button",onclick:()=>families.has(id)?openFamily(id):closeSheet()},"Cancel"),
+      families.has(id)&&!editingOther?h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Delete my flag"):null));
+  form.onsubmit=async e=>{
+    e.preventDefault();
+    const name=$("f-name").value.trim();
+    if(!name){err.textContent="Add a family or display name.";$("f-name").focus();return}
+    if(!pos){err.textContent="Place your flag on the map first.";placeBtn.focus();return}
+    const num=(x,max)=>{const n=parseInt(x,10);return Number.isFinite(n)&&n>=0&&n<=max?n:null};
+    const msgText=$("f-msg").value.trim(),days=parseInt(daySel.value,10)||3;
+    let message=null;
+    if(msgText){if(m&&m.text===msgText&&m.days===days)message={text:m.text,days:m.days,postedAt:m.postedAt,expiresAt:m.expiresAt};else{const t=now();message={text:msgText,days,postedAt:t,expiresAt:t+days*86400000}}}
+    const data={name,lat:+pos[0].toFixed(6),lng:+pos[1].toFixed(6),address:$("f-addr").value.trim(),
+      profession:$("f-prof").value.trim(),interests:$("f-int").value.trim(),
+      members:num($("f-mem").value,20),kids:num($("f-kids").value,15),
+      languages:[...langs.querySelectorAll("input:checked")].map(c=>c.value),
+      about:$("f-about").value.trim(),contact:$("f-contact").value.trim(),message,updatedAt:now()};
+    const btn=form.querySelector("button[type=submit]");btn.disabled=true;err.textContent="";
+    try{await setDoc(doc(db,"families",id),data);families.set(id,{id,...data});refresh();openFamily(id);toast("Saved")}
+    catch(x){btn.disabled=false;err.textContent=x&&x.code==="permission-denied"?"You can't save this flag. Check that you're logged in to your own account.":"Couldn't save. Check your connection and try again."}
+  };
+  sheet.append(form);
+}
+</script>
+</body>
+</html>
