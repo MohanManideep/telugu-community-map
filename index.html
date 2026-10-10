@@ -33,7 +33,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
 [hidden]{display:none!important}
 .app{height:100%;display:flex;flex-direction:column}
 header{display:flex;align-items:center;gap:8px 10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap;z-index:1000}
-.brand{display:flex;flex-direction:column;min-width:0;flex:1}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1;color:inherit;text-decoration:none;border-radius:8px;-webkit-tap-highlight-color:transparent}
+.brand:active h1{opacity:.6}
+@media (hover:hover){.brand:hover h1{color:var(--accent)}}
 .brand h1{font-family:var(--display);font-size:19px;margin:0;line-height:1.1;letter-spacing:-.01em}
 .brand small{color:var(--muted);font-size:12.5px}
 .brand small .te{font-family:var(--telugu);font-size:14px;color:var(--ink)}
@@ -106,7 +108,9 @@ textarea{resize:vertical;min-height:64px}
 .empty h2{font-family:var(--display);font-size:17px;margin:0 0 6px}
 .empty p{margin:0 0 12px;color:var(--muted);font-size:14px}
 /* flag markers */
-.flag{position:relative;width:0;height:0}
+.flag{position:relative;width:0;height:0;transform:scale(var(--s,1));transform-origin:0 0;transition:transform .25s ease}
+.flag.crowded .nm{display:none}
+.flag-icon:hover .flag.crowded .nm,.flag-icon:focus .flag.crowded .nm{display:block}
 .flag .pole{position:absolute;left:-1px;bottom:-2px;width:2px;height:30px;background:var(--ink);border-radius:1px}
 .flag .pen{position:absolute;left:1px;bottom:12px;width:18px;height:12px;background:var(--accent);clip-path:polygon(0 0,100% 50%,0 100%)}
 .flag .base{position:absolute;left:-3.5px;bottom:-5px;width:7px;height:7px;border-radius:50%;background:var(--ink)}
@@ -119,6 +123,10 @@ textarea{resize:vertical;min-height:64px}
 @keyframes pulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(2.4)}}
 @media (prefers-reduced-motion:reduce){.flag .dot.unread::after{animation:none;opacity:0}}
 .flag-icon{background:none;border:0}
+.dirs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.dirs .lbl{font-size:13px;color:var(--muted);margin-right:2px}
+.btnlink{display:inline-flex;align-items:center;padding:7px 12px;border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none;font-size:14px;background:var(--surface)}
+.btnlink:hover{border-color:var(--accent)}
 /* opening animation */
 .intro{position:fixed;inset:0;z-index:5000;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px;text-align:center;cursor:pointer;transition:opacity .5s ease,visibility .5s}
 .intro.out{opacity:0;visibility:hidden}
@@ -201,10 +209,10 @@ window.FIREBASE_CONFIG = {
 
 <div class="app">
   <header>
-    <div class="brand">
+    <a class="brand" href="./" id="homeLink" title="Home: back to the start and reload">
       <h1>Koblenz Telugu Families</h1>
       <small><span class="te">మన కుటుంబాలు</span> · Koblenz &amp; around</small>
-    </div>
+    </a>
     <div class="search" id="searchWrap" hidden><input id="q" type="search" placeholder="Search families, jobs, interests…" aria-label="Search families" autocomplete="off"></div>
     <button id="msgsBtn" class="chip ghost" type="button" hidden><span class="d"></span><span id="msgsCount"></span></button>
     <button id="mineBtn" class="primary" type="button" hidden>Add my family</button>
@@ -394,7 +402,19 @@ function redrawFlags(){
     if(!mk){mk=L.marker([f.lat,f.lng],{icon:flagIcon(f),keyboard:true,title:f.name||"Family",riseOnHover:true}).addTo(map);mk.on("click",()=>{if(!placing)openFamily(f.id)});markers.set(f.id,mk)}
     else{mk.setLatLng([f.lat,f.lng]);mk.setIcon(flagIcon(f));mk.off("click");mk.on("click",()=>{if(!placing)openFamily(f.id)})}
   }
+  scaleFlags();
 }
+// Flags grow when they're spread out and shrink when they're crowded together.
+function scaleFlags(){
+  const pts=[];for(const [id,mk] of markers)pts.push([mk,map.latLngToContainerPoint(mk.getLatLng())]);
+  for(const [mk,p] of pts){
+    let d=Infinity;for(const [m2,q] of pts){if(m2===mk)continue;const dd=Math.hypot(p.x-q.x,p.y-q.y);if(dd<d)d=dd}
+    const s=d===Infinity?1.3:Math.max(.7,Math.min(1.3,.7+(d-30)/150));
+    const el=mk.getElement()&&mk.getElement().querySelector(".flag");if(!el)continue;
+    el.style.setProperty("--s",s.toFixed(2));el.classList.toggle("crowded",d<70);
+  }
+}
+map.on("zoomend moveend",scaleFlags);
 function refresh(){
   redrawFlags();
   const act=[...families.values()].filter(f=>activeMsg(f)),unread=act.filter(f=>seen[f.id]!==f.message.postedAt).length;
@@ -430,7 +450,11 @@ function openFamily(id){
   add("About us",f.about);
   if(f.contact)add("Contact",copyRow(f.contact));
   sheet.append(dl.children.length?dl:h("p",{class:"note"},"This family hasn't shared more details yet."));
-  sheet.append(h("p",{style:"margin:12px 0 0"},h("a",{href:`https://www.openstreetmap.org/directions?to=${f.lat}%2C${f.lng}`,target:"_blank",rel:"noopener"},"Directions to this flag ↗")));
+  {const dest=`${f.lat},${f.lng}`;
+   const g=h("a",{class:"btnlink",href:`https://www.google.com/maps/dir/?api=1&destination=${dest}`,target:"_blank",rel:"noopener"},"Google Maps ↗");
+   const a=h("a",{class:"btnlink",href:`https://maps.apple.com/?daddr=${dest}`,target:"_blank",rel:"noopener"},"Apple Maps ↗");
+   const ios=/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)&&("ontouchend" in document||/iPhone|iPod/.test(navigator.userAgent));
+   sheet.append(h("div",{class:"dirs"},h("span",{class:"lbl"},"Directions"),...(ios?[a,g]:[g,a])));}
   const acts=h("div",{class:"actions"});
   if(id===me)acts.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Edit my family"));
   else if(isAdmin)acts.append(h("button",{type:"button",onclick:()=>openForm(id)},"Edit (admin)"),h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Remove pin"));
