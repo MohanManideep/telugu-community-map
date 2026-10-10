@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <title>Koblenz Telugu Families</title>
@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=Mandali&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
 :root{
   --bg:#eef1ec; --ink:#1c2a2f; --muted:#5b6a6e; --surface:#ffffff; --line:#d9e0dc;
@@ -25,7 +25,7 @@
 @media (prefers-color-scheme:dark){:root{
   --bg:#11181b; --ink:#e7eeec; --muted:#9aaaae; --surface:#1f292d; --line:#33424a;
   --accent:#f0a032; --accent-ink:#1a1206; --dot:#ff5a4f; --halo:#11181b; --focus:#7cc4dd; color-scheme:dark}
-  .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7)}
+  .maplibregl-canvas{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7)}
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overscroll-behavior:none}
@@ -53,10 +53,9 @@ button:disabled{opacity:.5;cursor:default}
 .chip .d{width:8px;height:8px;border-radius:50%;background:var(--dot)}
 .stage{position:relative;flex:1;min-height:0}
 #map{position:absolute;inset:0;background:var(--bg)}
-.leaflet-container{font-family:var(--body)}
-.leaflet-tile-container img.leaflet-tile{mix-blend-mode:normal;outline:1px solid transparent}
-.leaflet-tile-pane{will-change:transform}
-.placing #map{cursor:crosshair}
+.maplibregl-map{font-family:var(--body)}
+.maplibregl-ctrl-group button{padding:0;border-radius:0}
+.placing #map .maplibregl-canvas-container{cursor:crosshair}
 .overlay{position:absolute;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(3px)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;width:min(380px,100%);max-height:100%;overflow:auto;box-shadow:0 12px 32px rgba(0,0,0,.15)}
 .card h2{font-family:var(--display);font-size:20px;margin:0 0 4px}
@@ -122,7 +121,25 @@ textarea{resize:vertical;min-height:64px}
 .flag.temp .pen{background:var(--accent);filter:drop-shadow(0 0 4px var(--accent))}
 @keyframes pulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(2.4)}}
 @media (prefers-reduced-motion:reduce){.flag .dot.unread::after{animation:none;opacity:0}}
-.flag-icon{background:none;border:0}
+.flag-icon{width:0;height:0;cursor:pointer;background:none;border:0}
+.flag.approx .pen{opacity:.75}
+.conn{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:14px;background:var(--bg)}
+.conn h3{font-family:var(--display);font-size:15px;margin:0 0 6px}
+.conn p{margin:0 0 8px;font-size:13.5px;color:var(--muted)}
+.conn .quote{color:var(--ink);font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink)}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:#2e9b5f}
+.choice{display:flex;flex-direction:column;gap:6px}
+.choice label{flex-direction:row;align-items:flex-start;gap:8px;color:var(--ink);font-size:14px}
+.choice input{width:auto;margin-top:3px}
+.choice .hint{display:block;color:var(--muted);font-size:12.5px}
+.section-title{font-family:var(--display);font-size:15px;margin:16px 0 8px}
+.item{display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.item .who{min-width:0;overflow-wrap:anywhere}
+.item .who b{font-family:var(--display)}
+.item .who span{display:block;font-size:12.5px;color:var(--muted)}
+.req{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.req b{font-family:var(--display)}
 .dirs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
 .dirs .lbl{font-size:13px;color:var(--muted);margin-right:2px}
 .btnlink{display:inline-flex;align-items:center;padding:7px 12px;border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none;font-size:14px;background:var(--surface)}
@@ -214,6 +231,7 @@ window.FIREBASE_CONFIG = {
       <small><span class="te">మన కుటుంబాలు</span> · Koblenz &amp; around</small>
     </a>
     <div class="search" id="searchWrap" hidden><input id="q" type="search" placeholder="Search families, jobs, interests…" aria-label="Search families" autocomplete="off"></div>
+    <button id="reqBtn" class="chip ghost" type="button" hidden><span class="d"></span><span id="reqCount"></span></button>
     <button id="msgsBtn" class="chip ghost" type="button" hidden><span class="d"></span><span id="msgsCount"></span></button>
     <button id="mineBtn" class="primary" type="button" hidden>Add my family</button>
     <button id="infoBtn" class="ghost" type="button" aria-label="About and account">?</button>
@@ -237,10 +255,11 @@ window.FIREBASE_CONFIG = {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- constants ----------
 const KOBLENZ=[50.356,7.594];
+const MAP_STYLE="https://tiles.openfreemap.org/styles/liberty";
 const introDone=window.__introDone||Promise.resolve();
 const LANGS=["Telugu","German","English","Hindi","Tamil","Kannada"];
 const DAYS=[1,3,5,7,14];
@@ -260,24 +279,56 @@ function copyRow(text){const span=h("span",{style:"user-select:all"},text);const
 function head(title,sub){return h("div",{class:"sheet-head"},h("h2",null,title,sub?h("span",{class:"sub"},sub):null),h("button",{class:"x ghost",type:"button","aria-label":"Close",onclick:closeSheet},"✕"))}
 function openSheet(){sheet.hidden=false;sheet.textContent="";sheet.scrollTop=0}
 function closeSheet(){sheet.hidden=true;sheet.textContent="";openId=null}
+// "Löhrstraße 12, 56068 Koblenz" -> "Löhrstraße, 56068 Koblenz"
+function partialAddress(a){return String(a||"").replace(/(\D)\s+\d+\s*[a-zA-Z]?(\s*[-–\/]\s*\d+\s*[a-zA-Z]?)?(?=\s*(,|$))/,"$1").replace(/\s+,/g,",").trim()}
+// random shift of 100–200 m, so an "on request" flag doesn't point at the house
+function makeFuzz(lat){const a=Math.random()*2*Math.PI,d=100+Math.random()*100;return[+(d*Math.cos(a)/111320).toFixed(6),+(d*Math.sin(a)/(111320*Math.cos(lat*Math.PI/180))).toFixed(6)]}
+const r6=x=>+(+x).toFixed(6);
 
 // ---------- map ----------
-const map=L.map("map",{zoomControl:true,attributionControl:true}).setView(KOBLENZ,13);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,keepBuffer:4,updateWhenIdle:false,crossOrigin:true,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
-map.zoomControl.setPosition("bottomleft");
+const map=new maplibregl.Map({container:"map",style:MAP_STYLE,center:[KOBLENZ[1],KOBLENZ[0]],zoom:13,maxZoom:19,attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false});
+map.touchZoomRotate.disableRotation();
+map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-left");
+let houseNumberLayers=[];
+function showHouseNumbers(show){for(const id of houseNumberLayers){try{map.setLayoutProperty(id,"visibility",show?"visible":"none")}catch(e){}}}
+map.on("load",()=>{
+  houseNumberLayers=(map.getStyle().layers||[]).filter(l=>l["source-layer"]==="housenumber").map(l=>l.id);
+  showHouseNumbers(!!placing);
+});
+function goTo(lat,lng,zoom){map.easeTo({center:[lng,lat],zoom:zoom==null?map.getZoom():zoom,duration:600})}
 
 // ---------- config check ----------
 const cfg=window.FIREBASE_CONFIG||{};
 if(!cfg.apiKey||cfg.apiKey.startsWith("PASTE")){
-  const a=$("auth");a.hidden=false;a.append(h("div",{class:"card"},h("h2",null,"Almost ready"),h("p",null,"Paste your Firebase config into index.html (near the top, inside FIREBASE_CONFIG), then reload. See SETUP.md.")));
+  const a=$("auth");a.hidden=false;a.append(h("div",{class:"card"},h("h2",null,"Almost ready"),h("p",null,"Paste your Firebase config into index.html (near the top, inside FIREBASE_CONFIG), then reload.")));
   throw new Error("Firebase config missing");
 }
 const app=initializeApp(cfg), auth=getAuth(app);
 let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){db=getFirestore(app)}
 
 // ---------- state ----------
-let me=null, isAdmin=false, families=new Map(), seen={}, openId=null, placing=null;
-const markers=new Map(); let unsubs=[];
+let me=null, isAdmin=false, families=new Map(), privates=new Map(), seen={}, openId=null, placing=null;
+let outReq=new Map(), inReq=new Map();   // keyed by the other person's id
+const markers=new Map(), privSubs=new Map(); let unsubs=[]; let migrated=false;
+
+function connStatus(id){
+  const o=outReq.get(id),i=inReq.get(id);
+  if((o&&o.status==="accepted")||(i&&i.status==="accepted"))return"connected";
+  if(i&&i.status==="pending")return"incoming";
+  if(o)return"sent";
+  return"none";
+}
+function connectedIds(){const s=new Set();for(const [k,v] of outReq)if(v.status==="accepted")s.add(k);for(const [k,v] of inReq)if(v.status==="accepted")s.add(k);return s}
+function syncPrivateSubs(){
+  const want=connectedIds();if(me)want.add(me);
+  for(const [id,u] of privSubs)if(!want.has(id)){u();privSubs.delete(id);privates.delete(id)}
+  for(const id of want)if(!privSubs.has(id))privSubs.set(id,onSnapshot(doc(db,"private",id),s=>{if(s.exists())privates.set(id,s.data());else privates.delete(id);refresh();if(openId===id)openFamily(id,true)},()=>{}));
+}
+function famPos(f){const p=privates.get(f.id);if(p&&typeof p.lat==="number")return[p.lat,p.lng];return typeof f.lat==="number"?[f.lat,f.lng]:null}
+function exactPos(f){const p=privates.get(f.id);if(p&&typeof p.lat==="number")return[p.lat,p.lng];return f.approx?null:famPos(f)}
+function visibleAddress(f){const p=privates.get(f.id);if(p&&p.address)return{text:p.address,full:true};if(!f.approx&&f.address)return{text:f.address,full:true};if(f.street)return{text:f.street,full:false};return null}
+function visibleContact(f){const p=privates.get(f.id);if(p&&p.contact)return p.contact;return f.contact||""}
+function hasHidden(f){if(privates.get(f.id))return false;return !!f.approx||f.contactPublic===false}
 
 // ---------- auth UI ----------
 function showAuth(mode="login",msg=""){
@@ -317,117 +368,102 @@ function authError(code){return({
   "auth/network-request-failed":"No internet connection. Try again."}[code]||"Something went wrong. Please try again.")}
 
 onAuthStateChanged(auth,async user=>{
-  unsubs.forEach(u=>u());unsubs=[];families.clear();redrawFlags();closeSheet();
+  unsubs.forEach(u=>u());unsubs=[];for(const u of privSubs.values())u();privSubs.clear();privates.clear();
+  families.clear();outReq.clear();inReq.clear();redrawFlags();closeSheet();
   $("welcome").hidden=true;
-  if(!user){me=null;isAdmin=false;$("mineBtn").hidden=true;$("msgsBtn").hidden=true;$("searchWrap").hidden=true;$("empty").hidden=true;await introDone;if(!auth.currentUser)showAuth();return}
+  if(!user){me=null;isAdmin=false;for(const b of ["mineBtn","msgsBtn","reqBtn","searchWrap","empty"])$(b).hidden=true;await introDone;if(!auth.currentUser)showAuth();return}
   me=user.uid;$("auth").hidden=true;$("searchWrap").hidden=false;
   try{isAdmin=(await getDoc(doc(db,"admins",me))).exists()}catch(e){isAdmin=false}
-  let gotFam,gotSeen;const famReady=new Promise(r=>gotFam=r),seenReady=new Promise(r=>gotSeen=r);
+  let gotFam,gotSeen,gotIn;const famReady=new Promise(r=>gotFam=r),seenReady=new Promise(r=>gotSeen=r),inReady=new Promise(r=>gotIn=r);
   unsubs.push(onSnapshot(collection(db,"families"),snap=>{
     const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));families=m;refresh();gotFam();
     if(openId&&!families.has(openId))closeSheet();
+    if(isAdmin&&!migrated){migrated=true;migrateOldFlags()}
   },()=>{gotFam();toast("Couldn't load the families. Reload to try again.")}));
   unsubs.push(onSnapshot(doc(db,"seen",me),s=>{seen=s.exists()&&s.data().seen?{...s.data().seen}:{};refresh();gotSeen()},()=>gotSeen()));
+  unsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",me)),snap=>{
+    const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;syncPrivateSubs();refresh();gotIn();
+    if(openId)openFamily(openId,true);if(sheet.dataset.mode==="conn")showConnections();
+  },()=>gotIn()));
+  unsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",me)),snap=>{
+    const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;syncPrivateSubs();refresh();
+    if(openId)openFamily(openId,true);if(sheet.dataset.mode==="conn")showConnections();
+  },()=>{}));
+  syncPrivateSubs();
   const uid=me;
-  await Promise.all([introDone,famReady,Promise.race([seenReady,new Promise(r=>setTimeout(r,2500))])]);
+  await Promise.all([introDone,famReady,Promise.race([Promise.all([seenReady,inReady]),new Promise(r=>setTimeout(r,2500))])]);
   if(me===uid)maybeWelcome(user);
 });
 
-// ---------- welcome ----------
-function maybeWelcome(user){
-  let shown=false;try{shown=sessionStorage.getItem("welcomed")===me}catch(e){}
-  if(shown)return;
-  try{sessionStorage.setItem("welcomed",me)}catch(e){}
-  const w=$("welcome");w.textContent="";w.hidden=false;
-  const close=()=>{w.hidden=true;w.textContent=""};
-  w.onclick=e=>{if(e.target===w)close()};
-  const mine=families.get(me);
-  const others=[...families.values()].filter(f=>f.id!==me);
-  const unread=[...families.values()].filter(f=>{const m=activeMsg(f);return m&&f.id!==me&&seen[f.id]!==m.postedAt}).sort((a,b)=>b.message.postedAt-a.message.postedAt);
-  const famCount=families.size;
-  const stats=h("div",{class:"stats"},
-    h("div",{class:"stat"},h("b",null,String(famCount)),h("span",null,famCount===1?"family on the map":"families on the map")),
-    h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new message":"new messages")));
-  const card=h("div",{class:"card",role:"dialog","aria-modal":"true","aria-labelledby":"w-title"});
-  if(!mine){
-    const nm=(user.email||"").split("@")[0];
-    card.append(
-      h("p",{class:"hello"},"నమస్కారం!"),
-      h("h2",{id:"w-title"},"Welcome to the community map"),
-      h("p",null,others.length?`${others.length} Telugu ${others.length===1?"family is":"families are"} already here. Add yours so neighbours can find you.`:"You're one of the first here. Add your family and invite others from the WhatsApp group."),
-      stats,
-      h("ol",{class:"steps"},
-        h("li",null,"Add your family name and, if you like, what you do and your interests."),
-        h("li",null,"Put your flag on your home: search your address or tap your house."),
-        h("li",null,"Post a message, like an event or a question. A red dot shows it to everyone.")),
-      h("div",{class:"actions"},
-        h("button",{class:"primary",type:"button",onclick:()=>{close();openForm(me)}},"Add my family"),
-        h("button",{type:"button",onclick:close},"Explore the map first")),
-      h("p",{style:"margin:12px 0 0;font-size:12.5px"},"Signed in as ",nm?h("b",null,user.email):null));
-  }else{
-    card.append(
-      h("p",{class:"hello"},"నమస్కారం!"),
-      h("h2",{id:"w-title"},`Welcome back, ${mine.name||"friend"}`),
-      h("p",null,unread.length?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
-      stats);
-    if(unread.length){
-      const ul=h("ul",{class:"news"});
-      for(const f of unread.slice(0,3))ul.append(h("li",null,h("b",null,f.name||"Family"),": ",f.message.text.length>70?f.message.text.slice(0,70)+"…":f.message.text));
-      card.append(ul);
-    }
-    if(!activeMsg(mine))card.append(h("p",{class:"note",style:"margin:0 0 4px"},"Tip: post a message on your flag to invite people to an event or ask a question."));
-    card.append(h("div",{class:"actions"},
-      unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();$("msgsBtn").click()}},unread.length===1?"Read the message":"Read the messages"):null,
-      h("button",{class:unread.length?null:"primary",type:"button",onclick:()=>{close();focusFamily(mine)}},"Show my flag"),
-      h("button",{type:"button",onclick:close},"Explore the map")));
+// Flags saved before privacy settings existed: move contact into private storage (admin only, runs once).
+async function migrateOldFlags(){
+  const old=[...families.values()].filter(f=>f.v!==2&&typeof f.lat==="number");
+  for(const f of old){
+    try{
+      const b=writeBatch(db);
+      b.set(doc(db,"private",f.id),{lat:r6(f.lat),lng:r6(f.lng),address:f.address||"",contact:f.contact||"",dLat:0,dLng:0});
+      b.set(doc(db,"families",f.id),{name:f.name,lat:r6(f.lat),lng:r6(f.lng),approx:false,locPublic:true,contactPublic:false,
+        street:partialAddress(f.address||""),address:f.address||"",contact:"",
+        profession:f.profession||"",interests:f.interests||"",members:f.members??null,kids:f.kids??null,
+        languages:f.languages||[],about:f.about||"",message:f.message||null,updatedAt:f.updatedAt||now(),v:2});
+      await b.commit();
+    }catch(e){console.warn("migration",f.id,e)}
   }
-  w.append(card);
-  setTimeout(()=>{const b=card.querySelector("button");if(b)b.focus()},60);
-  w.onkeydown=e=>{if(e.key==="Escape")close()};
 }
 
 // ---------- flags ----------
-function flagIcon(f,{temp=false}={}){
+function flagHTML(f,{temp=false}={}){
   const m=activeMsg(f);let dot="";
   if(m&&!temp)dot=`<span class="dot ${seen[f.id]===m.postedAt?"read":"unread"}"></span>`;
-  return L.divIcon({className:"flag-icon",iconSize:[0,0],iconAnchor:[0,0],
-    html:`<div class="flag${f.id===me?" mine":""}${temp?" temp":""}"><span class="pole"></span><span class="pen"></span><span class="base"></span>${dot}<span class="nm">${esc(f.name||"Your flag")}</span></div>`});
+  const approx=!temp&&!exactPos(f)?" approx":"";
+  return `<div class="flag${f.id===me?" mine":""}${temp?" temp":""}${approx}"><span class="pole"></span><span class="pen"></span><span class="base"></span>${dot}<span class="nm">${esc(f.name||"Your flag")}</span></div>`;
+}
+function makeFlagEl(id){
+  const el=document.createElement("div");el.className="flag-icon";el.tabIndex=0;el.setAttribute("role","button");
+  el.addEventListener("click",e=>{e.stopPropagation();if(!placing)openFamily(id)});
+  el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();if(!placing)openFamily(id)}});
+  return el;
 }
 function redrawFlags(){
-  for(const [id,mk] of markers)if(!families.has(id)){mk.remove();markers.delete(id)}
-  for(const f of families.values()){
-    if(typeof f.lat!=="number"||typeof f.lng!=="number")continue;
-    if(placing&&placing.id===f.id){const mk=markers.get(f.id);if(mk){mk.remove();markers.delete(f.id)}continue}
-    let mk=markers.get(f.id);
-    if(!mk){mk=L.marker([f.lat,f.lng],{icon:flagIcon(f),keyboard:true,title:f.name||"Family",riseOnHover:true}).addTo(map);mk.on("click",()=>{if(!placing)openFamily(f.id)});markers.set(f.id,mk)}
-    else{mk.setLatLng([f.lat,f.lng]);mk.setIcon(flagIcon(f));mk.off("click");mk.on("click",()=>{if(!placing)openFamily(f.id)})}
+  for(const [id,o] of markers)if(!families.has(id)||(placing&&placing.id===id)){o.mk.remove();markers.delete(id)}
+  const list=[...families.values()].map(f=>({f,p:famPos(f)})).filter(o=>o.p&&!(placing&&placing.id===o.f.id)).sort((a,b)=>b.p[0]-a.p[0]);
+  for(const {f,p} of list){
+    let o=markers.get(f.id);
+    if(!o){const el=makeFlagEl(f.id);o={el,mk:new maplibregl.Marker({element:el,anchor:"top-left"}).setLngLat([p[1],p[0]]).addTo(map)};markers.set(f.id,o)}
+    else o.mk.setLngLat([p[1],p[0]]);
+    o.el.setAttribute("aria-label",(f.name||"Family")+" flag");
+    const html=flagHTML(f);if(o.el._h!==html){o.el.innerHTML=html;o.el._h=html}
   }
   scaleFlags();
 }
 // Flags grow when they're spread out and shrink when they're crowded together.
 function scaleFlags(){
-  const pts=[];for(const [id,mk] of markers)pts.push([mk,map.latLngToContainerPoint(mk.getLatLng())]);
-  for(const [mk,p] of pts){
-    let d=Infinity;for(const [m2,q] of pts){if(m2===mk)continue;const dd=Math.hypot(p.x-q.x,p.y-q.y);if(dd<d)d=dd}
+  const pts=[];for(const [id,o] of markers){const ll=o.mk.getLngLat();pts.push([o,map.project(ll)])}
+  for(const [o,p] of pts){
+    let d=Infinity;for(const [o2,q] of pts){if(o2===o)continue;const dd=Math.hypot(p.x-q.x,p.y-q.y);if(dd<d)d=dd}
     const s=d===Infinity?1.3:Math.max(.7,Math.min(1.3,.7+(d-30)/150));
-    const el=mk.getElement()&&mk.getElement().querySelector(".flag");if(!el)continue;
+    const el=o.el.querySelector(".flag");if(!el)continue;
     el.style.setProperty("--s",s.toFixed(2));el.classList.toggle("crowded",d<70);
   }
 }
-map.on("zoomend moveend",scaleFlags);
+map.on("zoomend",scaleFlags);map.on("moveend",scaleFlags);
+
 function refresh(){
   redrawFlags();
   const act=[...families.values()].filter(f=>activeMsg(f)),unread=act.filter(f=>seen[f.id]!==f.message.postedAt).length;
   $("msgsBtn").hidden=!me||act.length===0;
   $("msgsCount").textContent=unread?`${unread} new message${unread>1?"s":""}`:`${act.length} message${act.length>1?"s":""}`;
   $("msgsBtn").querySelector(".d").style.visibility=unread?"visible":"hidden";
+  const pend=[...inReq.values()].filter(r=>r.status==="pending").length;
+  $("reqBtn").hidden=!me||pend===0;
+  $("reqCount").textContent=`${pend} request${pend>1?"s":""}`;
   const mb=$("mineBtn");mb.hidden=!me;mb.textContent=families.has(me)?"My family":"Add my family";
   const e=$("empty");
   if(me&&families.size===0){e.hidden=false;e.textContent="";e.append(h("h2",null,"No families on the map yet"),h("p",null,"Be the first: add your family and put your flag on your home."),h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Add my family"))}
   else e.hidden=true;
 }
 setInterval(()=>{if(families.size)refresh()},60000);
-function focusFamily(f){if(typeof f.lat==="number")map.setView([f.lat,f.lng],Math.max(map.getZoom(),16))}
+function focusFamily(f){const p=famPos(f);if(p)goTo(p[0],p[1],Math.max(map.getZoom(),16))}
 
 async function markSeen(f){
   const m=activeMsg(f);if(!m||!me||seen[f.id]===m.postedAt)return;
@@ -436,40 +472,134 @@ async function markSeen(f){
   try{await setDoc(doc(db,"seen",me),{seen:keep})}catch(e){}
 }
 
+// ---------- connections ----------
+async function sendRequest(to,note){
+  const mine=families.get(me);
+  await setDoc(doc(db,"requests",me+"_"+to),{from:me,to,note:note.slice(0,200),fromName:(mine&&mine.name||"A family").slice(0,40),status:"pending",createdAt:now()});
+}
+async function answerRequest(from,accept){
+  const r=inReq.get(from);if(!r)return;
+  await updateDoc(doc(db,"requests",r.id),{status:accept?"accepted":"declined",respondedAt:now()});
+}
+async function removeConnection(id){
+  const o=outReq.get(id),i=inReq.get(id);
+  if(o)await deleteDoc(doc(db,"requests",o.id));
+  if(i&&i.status==="accepted")await deleteDoc(doc(db,"requests",i.id));
+}
+function connectBox(f){
+  const id=f.id,st=connStatus(id),box=h("div",{class:"conn"});
+  const name=f.name||"This family";
+  if(st==="connected"){
+    box.append(h("span",{class:"badge"},"Connected"),h("p",{style:"margin:6px 0 0"},"You can see each other's full address and contact."));
+    return box;
+  }
+  if(st==="incoming"){
+    const r=inReq.get(id);
+    box.append(h("h3",null,`${name} wants to connect`));
+    if(r.note)box.append(h("p",{class:"quote"},`"${r.note}"`));
+    const err=h("div",{class:"err",role:"alert"});
+    box.append(h("div",{class:"actions",style:"margin-top:4px"},
+      h("button",{class:"primary",type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(id,true);toast("Connected")}catch(x){e.target.disabled=false;err.textContent="Couldn't accept. Try again."}}},"Accept"),
+      h("button",{type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(id,false);toast("Request declined")}catch(x){e.target.disabled=false;err.textContent="Couldn't decline. Try again."}}},"Decline")),err);
+    return box;
+  }
+  if(st==="sent"){
+    box.append(h("h3",null,"Request sent"),h("p",{style:"margin:0"},`Waiting for ${name} to reply. Once they accept, you'll see their full address and contact here.`));
+    return box;
+  }
+  box.append(h("h3",null,hasHidden(f)?"Connect to see more":"Connect"),
+    h("p",null,hasHidden(f)?`${name} shares their full address and contact only with connected families.`:`Let ${name} know you'd like to get in touch.`));
+  if(!families.has(me)){
+    box.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Add your family first"));
+    box.append(h("p",{style:"margin:8px 0 0"},"So they know who is asking."));
+    return box;
+  }
+  const ta=h("textarea",{id:"c-note",maxlength:200,rows:2,placeholder:"Optional note, e.g. We just moved to Lützel and have a 4-year-old too!"});
+  const err=h("div",{class:"err",role:"alert"});
+  box.append(h("label",{for:"c-note"},h("span",null,"Add a short note ",h("span",{class:"opt"},"(optional)")),ta),err,
+    h("div",{class:"actions",style:"margin-top:8px"},h("button",{class:"primary",type:"button",onclick:async e=>{e.target.disabled=true;err.textContent="";try{await sendRequest(id,ta.value.trim());toast("Request sent")}catch(x){e.target.disabled=false;err.textContent="Couldn't send the request. Try again."}}},"Send connection request")));
+  return box;
+}
+function showConnections(){
+  openSheet();openId=null;sheet.dataset.mode="conn";
+  sheet.append(head("Connections","Families who can see each other's details"));
+  const nameOf=(id,fallback)=>{const f=families.get(id);return f&&f.name||fallback||"A family"};
+  const incoming=[...inReq.values()].filter(r=>r.status==="pending").sort((a,b)=>b.createdAt-a.createdAt);
+  const conns=[...connectedIds()];
+  const sent=[...outReq.values()].filter(r=>r.status!=="accepted");
+  sheet.append(h("div",{class:"section-title"},`Requests (${incoming.length})`));
+  if(!incoming.length)sheet.append(h("p",{class:"note"},"No new requests."));
+  for(const r of incoming){
+    const err=h("div",{class:"err",role:"alert"});
+    sheet.append(h("div",{class:"req"},h("b",null,nameOf(r.from,r.fromName)),r.note?h("span",{class:"conn quote",style:"border:0;padding:0;margin:0;background:none"},`"${r.note}"`):null,
+      h("div",{class:"inline"},
+        h("button",{class:"primary",type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(r.from,true);toast("Connected")}catch(x){e.target.disabled=false;err.textContent="Couldn't accept. Try again."}}},"Accept"),
+        h("button",{type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(r.from,false)}catch(x){e.target.disabled=false;err.textContent="Couldn't decline. Try again."}}},"Decline"),
+        families.has(r.from)?h("button",{class:"ghost",type:"button",onclick:()=>{const f=families.get(r.from);focusFamily(f);openFamily(r.from)}},"See on map"):null),err));
+  }
+  sheet.append(h("div",{class:"section-title"},`Connected (${conns.length})`));
+  if(!conns.length)sheet.append(h("p",{class:"note"},"No connections yet. Tap a family's flag and send a request."));
+  const list=h("div",{class:"list"});
+  for(const id of conns){
+    const rm=h("button",{class:"small danger",type:"button",onclick:async()=>{rm.disabled=true;try{await removeConnection(id);toast("Connection removed")}catch(x){rm.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove");
+    list.append(h("div",{class:"item"},h("div",{class:"who"},h("b",null,nameOf(id)),h("span",null,(privates.get(id)||{}).address||"")),
+      h("div",{class:"inline"},families.has(id)?h("button",{class:"small",type:"button",onclick:()=>{focusFamily(families.get(id));openFamily(id)}},"Open"):null,rm)));
+  }
+  sheet.append(list);
+  if(sent.length){
+    sheet.append(h("div",{class:"section-title"},`Sent (${sent.length})`));
+    for(const r of sent){
+      const c=h("button",{class:"small",type:"button",onclick:async()=>{c.disabled=true;try{await deleteDoc(doc(db,"requests",r.id));toast("Request cancelled")}catch(x){c.disabled=false;toast("Couldn't cancel it. Try again.")}}},"Cancel");
+      sheet.append(h("div",{class:"item"},h("div",{class:"who"},h("b",null,nameOf(r.to)),h("span",null,"Waiting for reply")),r.status==="pending"?c:null));
+    }
+  }
+}
+$("reqBtn").onclick=showConnections;
+
 // ---------- details ----------
-function openFamily(id){
-  const f=families.get(id);if(!f)return;openId=id;openSheet();
+function openFamily(id,keepScroll){
+  const f=families.get(id);if(!f)return;
+  const sc=sheet.scrollTop;openId=id;sheet.hidden=false;sheet.textContent="";sheet.dataset.mode="";
   sheet.append(head(f.name||"Family"));
   const m=activeMsg(f);
   if(m)sheet.append(h("div",{class:"msg"},h("div",{class:"lbl"},"Message to the community"),h("p",null,m.text),h("div",{class:"when"},`Posted ${fmtDate(m.postedAt)} · ${fmtLeft(m.expiresAt-now())}`)));
   const dl=h("dl"),add=(k,v)=>{if(v==null||v==="")return;dl.append(h("dt",null,k),h("dd",null,v))};
-  if(f.address)add("Address",copyRow(f.address));
+  const addr=visibleAddress(f);
+  if(addr)add(addr.full?"Address":"Area",addr.full?copyRow(addr.text):h("span",null,addr.text,h("span",{class:"opt",style:"color:var(--muted)"}," · flag shown nearby, not exact")));
   add("What we do",f.profession);add("Interests",f.interests);
   if(f.members||f.kids)add("Family",[f.members?`${f.members} member${f.members>1?"s":""}`:null,f.kids?`${f.kids} kid${f.kids>1?"s":""}`:null].filter(Boolean).join(" · "));
   if(f.languages&&f.languages.length)add("Languages",f.languages.join(", "));
   add("About us",f.about);
-  if(f.contact)add("Contact",copyRow(f.contact));
+  const contact=visibleContact(f);if(contact)add("Contact",copyRow(contact));
   sheet.append(dl.children.length?dl:h("p",{class:"note"},"This family hasn't shared more details yet."));
-  {const dest=`${f.lat},${f.lng}`;
-   const g=h("a",{class:"btnlink",href:`https://www.google.com/maps/dir/?api=1&destination=${dest}`,target:"_blank",rel:"noopener"},"Google Maps ↗");
-   const a=h("a",{class:"btnlink",href:`https://maps.apple.com/?daddr=${dest}`,target:"_blank",rel:"noopener"},"Apple Maps ↗");
-   const ios=/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)&&("ontouchend" in document||/iPhone|iPod/.test(navigator.userAgent));
-   sheet.append(h("div",{class:"dirs"},h("span",{class:"lbl"},"Directions"),...(ios?[a,g]:[g,a])));}
-  const acts=h("div",{class:"actions"});
-  if(id===me)acts.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Edit my family"));
-  else if(isAdmin)acts.append(h("button",{type:"button",onclick:()=>openForm(id)},"Edit (admin)"),h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Remove pin"));
-  if(acts.children.length)sheet.append(acts);
+  const ex=exactPos(f);
+  if(ex){
+    const dest=`${ex[0]},${ex[1]}`;
+    const g=h("a",{class:"btnlink",href:`https://www.google.com/maps/dir/?api=1&destination=${dest}`,target:"_blank",rel:"noopener"},"Google Maps ↗");
+    const a=h("a",{class:"btnlink",href:`https://maps.apple.com/?daddr=${dest}`,target:"_blank",rel:"noopener"},"Apple Maps ↗");
+    const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend" in document);
+    sheet.append(h("div",{class:"dirs"},h("span",{class:"lbl"},"Directions"),...(ios?[a,g]:[g,a])));
+  }
+  if(id===me){
+    sheet.append(h("p",{class:"note"},h("b",null,"Who sees what: "),
+      `Exact location and address: ${f.approx?"only connected families (others see your flag nearby)":"everyone"}. Contact: ${f.contactPublic?"everyone":"only connected families"}.`));
+    sheet.append(h("div",{class:"actions"},h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Edit my family"),h("button",{type:"button",onclick:showConnections},"My connections")));
+  }else{
+    sheet.append(connectBox(f));
+    if(isAdmin)sheet.append(h("div",{class:"actions"},h("button",{type:"button",onclick:()=>openForm(id)},"Edit (admin)"),h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Remove pin")));
+  }
+  if(keepScroll)sheet.scrollTop=sc;
   markSeen(f);
 }
 function confirmRemove(id){
   const f=families.get(id);if(!f)return;openSheet();
   sheet.append(head("Remove this flag?"),h("p",null,`"${f.name||"Family"}" and their message will be removed from the map for everyone.`),
     h("div",{class:"actions"},
-      h("button",{class:"danger",type:"button",onclick:async e=>{e.target.disabled=true;try{await deleteDoc(doc(db,"families",id));closeSheet();toast("Flag removed")}catch(x){e.target.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove"),
+      h("button",{class:"danger",type:"button",onclick:async e=>{e.target.disabled=true;try{const b=writeBatch(db);b.delete(doc(db,"families",id));b.delete(doc(db,"private",id));await b.commit();closeSheet();toast("Flag removed")}catch(x){e.target.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove"),
       h("button",{type:"button",onclick:()=>id===me?openForm(id):openFamily(id)},"Cancel")));
 }
 $("msgsBtn").onclick=()=>{
-  openSheet();openId=null;sheet.append(head("Community messages","Tap one to see the family"));
+  openSheet();openId=null;sheet.dataset.mode="";sheet.append(head("Community messages","Tap one to see the family"));
   const list=h("div",{class:"list"});
   for(const f of [...families.values()].filter(f=>activeMsg(f)).sort((a,b)=>b.message.postedAt-a.message.postedAt)){
     const unread=seen[f.id]!==f.message.postedAt;
@@ -479,12 +609,14 @@ $("msgsBtn").onclick=()=>{
 };
 $("mineBtn").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
 $("infoBtn").onclick=()=>{
-  openSheet();openId=null;sheet.append(head("About this map"),
+  openSheet();openId=null;sheet.dataset.mode="";sheet.append(head("About this map"),
     h("p",null,"A members-only map for Telugu families in Koblenz and nearby towns, so you can see who lives close by and say hello."),
     h("div",{class:"note"},h("b",null,"Why log in? "),"The map shows where families live, so only logged-in members can see it. Logging in also makes sure only you can change your family's flag. The admin can edit or remove any flag to keep the map tidy."),
-    h("div",{class:"note"},h("b",null,"Your privacy. "),"You choose where your flag goes. Address, contact and all other details are optional, and you can edit or delete your flag at any time."),
+    h("div",{class:"note"},h("b",null,"Your privacy. "),"You decide who sees your exact location, address and contact: everyone, or only families you've connected with. Others then see only your street and a flag placed nearby."),
+    h("div",{class:"note"},h("b",null,"Connections. "),"Send a request from any family's flag, with a short note if you like. Once they accept, you both see each other's full details. You only need to connect once, and you can remove a connection any time."),
     h("div",{class:"note"},h("b",null,"Messages. "),"Post a short message with your flag. A red dot appears on your flag for everyone, turns into a ring once they've read it, and disappears after the days you choose."));
-  if(me)sheet.append(h("p",{class:"note"},"Logged in as ",h("b",null,auth.currentUser&&auth.currentUser.email||""),isAdmin?" (admin)":""),
+  if(me)sheet.append(h("div",{class:"actions",style:"margin-top:0"},h("button",{type:"button",onclick:showConnections},`My connections (${connectedIds().size})`)),
+    h("p",{class:"note"},"Logged in as ",h("b",null,auth.currentUser&&auth.currentUser.email||""),isAdmin?" (admin)":""),
     h("details",null,h("summary",{style:"font-size:13px;color:var(--muted)"},"Your user ID (for admin setup)"),copyRow(me)),
     h("div",{class:"actions"},h("button",{type:"button",onclick:()=>signOut(auth)},"Log out")));
 };
@@ -496,7 +628,7 @@ $("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();run
 function runSearch(){
   const raw=$("q").value.trim(),q=norm(raw);if(!q){if(sheet.dataset.mode==="search"){closeSheet();sheet.dataset.mode=""}return}
   const terms=q.split(" ");
-  const hits=[...families.values()].filter(f=>{const hay=norm([f.name,f.profession,f.interests,f.about,(f.languages||[]).join(" "),f.address].filter(Boolean).join(" "));return terms.every(t=>hay.includes(t))});
+  const hits=[...families.values()].filter(f=>{const a=visibleAddress(f);const hay=norm([f.name,f.profession,f.interests,f.about,(f.languages||[]).join(" "),a&&a.text].filter(Boolean).join(" "));return terms.every(t=>hay.includes(t))});
   openSheet();openId=null;sheet.dataset.mode="search";
   sheet.append(head(hits.length?`${hits.length} famil${hits.length>1?"ies":"y"} found`:"No families found",`for "${raw}"`));
   const list=h("div",{class:"list"});
@@ -506,26 +638,27 @@ function runSearch(){
 }
 
 // ---------- placing the flag ----------
-let tempMarker=null;
+let tempMarker=null,tempEl=null;
 function setTemp(lat,lng,label){
   placing.pos=[lat,lng];if(label!==undefined)placing.addr=label;
-  if(!tempMarker){tempMarker=L.marker([lat,lng],{icon:flagIcon({name:placing.name},{temp:true}),draggable:true,zIndexOffset:1000}).addTo(map);
-    tempMarker.on("dragend",()=>{const p=tempMarker.getLatLng();placing.pos=[p.lat,p.lng]})}
-  else tempMarker.setLatLng([lat,lng]);
+  if(!tempMarker){
+    tempEl=document.createElement("div");tempEl.className="flag-icon";tempEl.innerHTML=flagHTML({name:placing.name},{temp:true});
+    tempMarker=new maplibregl.Marker({element:tempEl,anchor:"top-left",draggable:true}).setLngLat([lng,lat]).addTo(map);
+    tempMarker.on("dragend",()=>{const p=tempMarker.getLngLat();placing.pos=[p.lat,p.lng];placing.addr=null});
+  }else tempMarker.setLngLat([lng,lat]);
   $("p-done").disabled=false;
 }
-function onMapClick(e){if(placing)setTemp(e.latlng.lat,e.latlng.lng,null)}
-map.on("click",onMapClick);
+map.on("click",e=>{if(placing)setTemp(e.lngLat.lat,e.lngLat.lng,null)});
 function startPlacing(id,name,pos,onDone){
   placing={id,name:name||"Your flag",pos:null,addr:null,onDone};
   sheet.hidden=true;$("placebar").hidden=false;$("stage").classList.add("placing");
   $("p-addr").value="";$("p-sugg").textContent="";$("p-done").disabled=true;
-  redrawFlags();
-  if(pos){setTemp(pos[0],pos[1]);map.setView(pos,Math.max(map.getZoom(),17))}
+  showHouseNumbers(true);redrawFlags();
+  if(pos){setTemp(pos[0],pos[1]);goTo(pos[0],pos[1],Math.max(map.getZoom(),17))}
 }
 function endPlacing(ok){
-  const p=placing;placing=null;if(tempMarker){tempMarker.remove();tempMarker=null}
-  $("placebar").hidden=true;$("stage").classList.remove("placing");sheet.hidden=false;redrawFlags();
+  const p=placing;placing=null;if(tempMarker){tempMarker.remove();tempMarker=null;tempEl=null}
+  $("placebar").hidden=true;$("stage").classList.remove("placing");sheet.hidden=false;showHouseNumbers(false);redrawFlags();
   if(ok&&p&&p.pos)p.onDone(p.pos,p.addr);
 }
 $("p-done").onclick=()=>endPlacing(true);
@@ -545,53 +678,69 @@ async function addrSearch(){
     if(!res.length){box.append(h("span",{class:"placed"},"No match. Check the spelling, or tap your house on the map."));return}
     for(const x of res){const a=x.address||{};
       const label=[[a.road||a.pedestrian||a.footway,a.house_number].filter(Boolean).join(" "),[a.postcode,a.city||a.town||a.village||a.suburb].filter(Boolean).join(" ")].filter(Boolean).join(", ")||x.display_name.split(",").slice(0,3).join(",");
-      box.append(h("button",{type:"button",onclick:()=>{setTemp(+x.lat,+x.lon,label);map.setView([+x.lat,+x.lon],18);box.textContent="";$("p-addr").value=label}},label))}
+      box.append(h("button",{type:"button",onclick:()=>{setTemp(+x.lat,+x.lon,label);goTo(+x.lat,+x.lon,18);box.textContent="";$("p-addr").value=label}},label))}
   }catch(e){box.textContent="";box.append(h("span",{class:"placed"},"Address search is not available right now. Tap your house on the map instead."))}
 }
 $("p-loc").onclick=()=>{
   if(!navigator.geolocation){toast("Location isn't available on this device.");return}
   $("p-loc").disabled=true;
-  navigator.geolocation.getCurrentPosition(p=>{$("p-loc").disabled=false;setTemp(p.coords.latitude,p.coords.longitude,null);map.setView([p.coords.latitude,p.coords.longitude],18);toast("Check the flag sits on your house, then tap Done.")},
+  navigator.geolocation.getCurrentPosition(p=>{$("p-loc").disabled=false;setTemp(p.coords.latitude,p.coords.longitude,null);goTo(p.coords.latitude,p.coords.longitude,18);toast("Check the flag sits on your house, then tap Done.")},
     ()=>{$("p-loc").disabled=false;toast("Couldn't get your location. Search your address instead.")},{enableHighAccuracy:true,timeout:12000});
 };
 
 // ---------- form ----------
-function openForm(id){
+async function openForm(id){
   if(!id)return;const f=families.get(id)||{},editingOther=id!==me;
+  let priv=privates.get(id)||null;
+  if(!priv&&families.has(id)){try{const s=await getDoc(doc(db,"private",id));if(s.exists())priv=s.data()}catch(e){}}
   openSheet();openId=null;sheet.dataset.mode="";
   sheet.append(head(editingOther?"Edit family (admin)":families.has(id)?"Edit my family":"Add my family",editingOther?null:"Only you and the admin can change this"));
   const v=x=>x==null?"":String(x);
   const inp=(idn,label,val,o={},opt=true)=>{const i=h(o.tag||"input",Object.assign({id:idn},o.tag?{}:{type:o.type||"text"},o.extra||{}));i.value=val;return h("label",{for:idn},h("span",null,label,opt?h("span",{class:"opt"}," (optional)"):null),i)};
-  let pos=typeof f.lat==="number"?[f.lat,f.lng]:null;
+  let pos=priv&&typeof priv.lat==="number"?[priv.lat,priv.lng]:(typeof f.lat==="number"&&!f.approx?[f.lat,f.lng]:null);
+  const fullAddr=priv?priv.address:(f.address||""), fullContact=priv?priv.contact:(f.contact||"");
+  const locPublic=f.v===2?!f.approx:true, contactPublic=f.v===2?!!f.contactPublic:false;
   const err=h("div",{class:"err",role:"alert"});
   const placedTxt=h("span",{class:"placed"}),placeBtn=h("button",{type:"button"});
   const sync=()=>{placedTxt.textContent=pos?"✓ Flag placed":"Not placed yet";placedTxt.className="placed"+(pos?" yes":"");placeBtn.textContent=pos?"Move my flag":"Place my flag on the map";placeBtn.className=pos?"":"primary"};
-  placeBtn.onclick=()=>startPlacing(id,$("f-name").value.trim()||f.name,pos,(p,addr)=>{pos=p;sync();err.textContent="";const a=$("f-addr");if(addr&&!a.value.trim())a.value=addr});
+  placeBtn.onclick=()=>startPlacing(id,$("f-name").value.trim()||f.name,pos,(p,addr)=>{pos=p;sync();err.textContent="";const a=$("f-addr");if(addr&&!a.value.trim()){a.value=addr;updPreview()}});
   sync();
+  const radio=(name,val,checked,label,hint)=>h("label",null,h("input",{type:"radio",name,value:val,checked}),h("span",null,label,hint?h("span",{class:"hint"},hint):null));
+  const preview=h("span",{class:"hint"});
+  const updPreview=()=>{const a=$("f-addr").value.trim();preview.textContent=a?`Others will see: "${partialAddress(a)}" and your flag about 150 m away.`:"Others will see your flag about 150 m away."};
   const langs=h("div",{class:"langs"});
   for(const l of LANGS){const c=h("input",{type:"checkbox",id:"lang-"+l,value:l});c.checked=(f.languages||[]).includes(l);langs.append(h("label",{for:"lang-"+l},c,l))}
   const m=activeMsg(f);
   const daySel=h("select",{id:"f-days"});for(const d of DAYS){const o=h("option",{value:d},`${d} day${d>1?"s":""}`);if((m?m.days:3)===d)o.selected=true;daySel.append(o)}
+  const locChoice=h("div",{class:"choice",role:"radiogroup","aria-label":"Who can see your exact location and address"},
+    radio("loc","public",locPublic,"Everyone"),
+    h("label",null,h("input",{type:"radio",name:"loc",value:"private",checked:!locPublic}),h("span",null,"Only families I've connected with",preview)));
+  const contactChoice=h("div",{class:"choice",role:"radiogroup","aria-label":"Who can see your contact"},
+    radio("contact","public",contactPublic,"Everyone"),
+    radio("contact","private",!contactPublic,"Only families I've connected with"));
   const form=h("form",{novalidate:true},
     h("fieldset",null,h("legend",null,"Your flag"),
       inp("f-name","Family or display name",v(f.name),{extra:{maxlength:40,placeholder:"e.g. Rao family"}},false),
       h("div",{class:"inline"},placeBtn,placedTxt),
-      inp("f-addr","Address",v(f.address),{extra:{maxlength:120,placeholder:"e.g. Löhrstraße 12, 56068 Koblenz"}}),
-      h("p",{class:"note",style:"margin:0"},"Only add your address if you're happy for all members to see it.")),
+      inp("f-addr","Address",v(fullAddr),{extra:{maxlength:120,placeholder:"e.g. Löhrstraße 12, 56068 Koblenz"}})),
+    h("fieldset",null,h("legend",null,"Who can see what"),
+      h("div",null,h("div",{style:"font-size:13px;color:var(--muted);margin-bottom:6px"},"Exact location and full address"),locChoice),
+      inp("f-contact","Contact (phone, WhatsApp or email)",v(fullContact),{extra:{maxlength:80}}),
+      h("div",null,h("div",{style:"font-size:13px;color:var(--muted);margin-bottom:6px"},"Contact"),contactChoice)),
     h("fieldset",null,h("legend",null,"About you"),
       inp("f-prof","What you do",v(f.profession),{extra:{maxlength:80,placeholder:"e.g. IT, student, doctor"}}),
       inp("f-int","Interests",v(f.interests),{extra:{maxlength:120,placeholder:"e.g. cricket, cooking, festivals"}}),
       h("div",{class:"row2"},inp("f-mem","Family members",v(f.members),{type:"number",extra:{min:1,max:20,inputmode:"numeric"}}),inp("f-kids","Kids",v(f.kids),{type:"number",extra:{min:0,max:15,inputmode:"numeric"}})),
       h("div",null,h("div",{style:"font-size:13px;color:var(--muted);margin-bottom:6px"},"Languages ",h("span",{class:"opt"},"(optional)")),langs),
-      inp("f-about","About us",v(f.about),{tag:"textarea",extra:{maxlength:200,rows:2}}),
-      inp("f-contact","Contact (phone, WhatsApp or email)",v(f.contact),{extra:{maxlength:80}}),
-      h("p",{class:"note",style:"margin:0"},"Only share contact details you're happy for every member to see.")),
+      inp("f-about","About us",v(f.about),{tag:"textarea",extra:{maxlength:200,rows:2}})),
     h("fieldset",null,h("legend",null,"Message to the community"),
       inp("f-msg","Message",m?m.text:"",{tag:"textarea",extra:{maxlength:240,rows:2,placeholder:"e.g. Bathukamma get-together on Saturday, all welcome!"}}),
       h("label",{for:"f-days"},h("span",null,"Show the red dot for"),daySel)),
     err,
     h("div",{class:"actions"},h("button",{class:"primary",type:"submit"},"Save"),h("button",{type:"button",onclick:()=>families.has(id)?openFamily(id):closeSheet()},"Cancel"),
       families.has(id)&&!editingOther?h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Delete my flag"):null));
+  sheet.append(form);
+  $("f-addr").addEventListener("input",updPreview);updPreview();
   form.onsubmit=async e=>{
     e.preventDefault();
     const name=$("f-name").value.trim();
@@ -601,16 +750,80 @@ function openForm(id){
     const msgText=$("f-msg").value.trim(),days=parseInt(daySel.value,10)||3;
     let message=null;
     if(msgText){if(m&&m.text===msgText&&m.days===days)message={text:m.text,days:m.days,postedAt:m.postedAt,expiresAt:m.expiresAt};else{const t=now();message={text:msgText,days,postedAt:t,expiresAt:t+days*86400000}}}
-    const data={name,lat:+pos[0].toFixed(6),lng:+pos[1].toFixed(6),address:$("f-addr").value.trim(),
+    const lp=form.querySelector('input[name="loc"]:checked').value==="public";
+    const cp=form.querySelector('input[name="contact"]:checked').value==="public";
+    const address=$("f-addr").value.trim(),contact=$("f-contact").value.trim();
+    const lat=r6(pos[0]),lng=r6(pos[1]);
+    let dLat=0,dLng=0;
+    if(priv&&priv.lat===lat&&priv.lng===lng&&(priv.dLat||priv.dLng)){dLat=priv.dLat;dLng=priv.dLng}else{[dLat,dLng]=makeFuzz(lat)}
+    const pub={name,lat:lp?lat:r6(lat+dLat),lng:lp?lng:r6(lng+dLng),approx:!lp,locPublic:lp,contactPublic:cp,
+      street:partialAddress(address),address:lp?address:"",contact:cp?contact:"",
       profession:$("f-prof").value.trim(),interests:$("f-int").value.trim(),
       members:num($("f-mem").value,20),kids:num($("f-kids").value,15),
       languages:[...langs.querySelectorAll("input:checked")].map(c=>c.value),
-      about:$("f-about").value.trim(),contact:$("f-contact").value.trim(),message,updatedAt:now()};
+      about:$("f-about").value.trim(),message,updatedAt:now(),v:2};
+    const prv={lat,lng,address,contact,dLat,dLng};
     const btn=form.querySelector("button[type=submit]");btn.disabled=true;err.textContent="";
-    try{await setDoc(doc(db,"families",id),data);families.set(id,{id,...data});refresh();openFamily(id);toast("Saved")}
-    catch(x){btn.disabled=false;err.textContent=x&&x.code==="permission-denied"?"You can't save this flag. Check that you're logged in to your own account.":"Couldn't save. Check your connection and try again."}
+    try{
+      const b=writeBatch(db);b.set(doc(db,"private",id),prv);b.set(doc(db,"families",id),pub);await b.commit();
+      families.set(id,{id,...pub});privates.set(id,prv);refresh();openFamily(id);toast("Saved");
+    }catch(x){btn.disabled=false;err.textContent=x&&x.code==="permission-denied"?"You can't save this flag. Check that you're logged in to your own account.":"Couldn't save. Check your connection and try again."}
   };
-  sheet.append(form);
+}
+
+// ---------- welcome ----------
+function maybeWelcome(user){
+  let shown=false;try{shown=sessionStorage.getItem("welcomed")===me}catch(e){}
+  if(shown)return;
+  try{sessionStorage.setItem("welcomed",me)}catch(e){}
+  const w=$("welcome");w.textContent="";w.hidden=false;
+  const close=()=>{w.hidden=true;w.textContent=""};
+  w.onclick=e=>{if(e.target===w)close()};
+  const mine=families.get(me);
+  const others=[...families.values()].filter(f=>f.id!==me);
+  const unread=[...families.values()].filter(f=>{const m=activeMsg(f);return m&&f.id!==me&&seen[f.id]!==m.postedAt}).sort((a,b)=>b.message.postedAt-a.message.postedAt);
+  const pend=[...inReq.values()].filter(r=>r.status==="pending");
+  const famCount=families.size;
+  const stats=h("div",{class:"stats"},
+    h("div",{class:"stat"},h("b",null,String(famCount)),h("span",null,famCount===1?"family on the map":"families on the map")),
+    h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new message":"new messages")));
+  const card=h("div",{class:"card",role:"dialog","aria-modal":"true","aria-labelledby":"w-title"});
+  if(!mine){
+    card.append(
+      h("p",{class:"hello"},"నమస్కారం!"),
+      h("h2",{id:"w-title"},"Welcome to the community map"),
+      h("p",null,others.length?`${others.length} Telugu ${others.length===1?"family is":"families are"} already here. Add yours so neighbours can find you.`:"You're one of the first here. Add your family and invite others from the WhatsApp group."),
+      stats,
+      h("ol",{class:"steps"},
+        h("li",null,"Add your family name and, if you like, what you do and your interests."),
+        h("li",null,"Put your flag on your home. You choose who sees your exact address and contact."),
+        h("li",null,"Connect with families near you, and post a message to say hello.")),
+      h("div",{class:"actions"},
+        h("button",{class:"primary",type:"button",onclick:()=>{close();openForm(me)}},"Add my family"),
+        h("button",{type:"button",onclick:close},"Explore the map first")),
+      h("p",{style:"margin:12px 0 0;font-size:12.5px"},"Signed in as ",h("b",null,user.email||"")));
+  }else{
+    card.append(
+      h("p",{class:"hello"},"నమస్కారం!"),
+      h("h2",{id:"w-title"},`Welcome back, ${mine.name||"friend"}`),
+      h("p",null,unread.length||pend.length?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
+      stats);
+    if(pend.length)card.append(h("p",{class:"note",style:"margin:0 0 10px"},h("b",null,`${pend.length} connection request${pend.length>1?"s":""}`)," waiting for your reply."));
+    if(unread.length){
+      const ul=h("ul",{class:"news"});
+      for(const f of unread.slice(0,3))ul.append(h("li",null,h("b",null,f.name||"Family"),": ",f.message.text.length>70?f.message.text.slice(0,70)+"…":f.message.text));
+      card.append(ul);
+    }
+    if(!activeMsg(mine)&&!pend.length)card.append(h("p",{class:"note",style:"margin:0 0 4px"},"Tip: post a message on your flag to invite people to an event or ask a question."));
+    const first=pend.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showConnections()}},pend.length===1?"See the request":"See the requests")
+      :unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();$("msgsBtn").click()}},unread.length===1?"Read the message":"Read the messages"):null;
+    card.append(h("div",{class:"actions"},first,
+      h("button",{class:first?null:"primary",type:"button",onclick:()=>{close();focusFamily(mine)}},"Show my flag"),
+      h("button",{type:"button",onclick:close},"Explore the map")));
+  }
+  w.append(card);
+  setTimeout(()=>{const b=card.querySelector("button");if(b)b.focus()},60);
+  w.onkeydown=e=>{if(e.key==="Escape")close()};
 }
 </script>
 </body>
