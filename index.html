@@ -281,8 +281,9 @@ function openSheet(){sheet.hidden=false;sheet.textContent="";sheet.scrollTop=0}
 function closeSheet(){sheet.hidden=true;sheet.textContent="";openId=null}
 // "Löhrstraße 12, 56068 Koblenz" -> "Löhrstraße, 56068 Koblenz"
 function partialAddress(a){return String(a||"").replace(/(\D)\s+\d+\s*[a-zA-Z]?(\s*[-–\/]\s*\d+\s*[a-zA-Z]?)?(?=\s*(,|$))/,"$1").replace(/\s+,/g,",").trim()}
-// random shift of 100–200 m, so an "on request" flag doesn't point at the house
-function makeFuzz(lat){const a=Math.random()*2*Math.PI,d=100+Math.random()*100;return[+(d*Math.cos(a)/111320).toFixed(6),+(d*Math.sin(a)/(111320*Math.cos(lat*Math.PI/180))).toFixed(6)]}
+// shift of 50 m in a random direction, so an "on request" flag doesn't point at the house
+const FUZZ_M=50;
+function makeFuzz(lat,angle){const a=angle==null?Math.random()*2*Math.PI:angle;return[+(FUZZ_M*Math.cos(a)/111320).toFixed(6),+(FUZZ_M*Math.sin(a)/(111320*Math.cos(lat*Math.PI/180))).toFixed(6)]}
 const r6=x=>+(+x).toFixed(6);
 
 // ---------- map ----------
@@ -707,7 +708,7 @@ async function openForm(id){
   sync();
   const radio=(name,val,checked,label,hint)=>h("label",null,h("input",{type:"radio",name,value:val,checked}),h("span",null,label,hint?h("span",{class:"hint"},hint):null));
   const preview=h("span",{class:"hint"});
-  const updPreview=()=>{const a=$("f-addr").value.trim();preview.textContent=a?`Others will see: "${partialAddress(a)}" and your flag about 150 m away.`:"Others will see your flag about 150 m away."};
+  const updPreview=()=>{const a=$("f-addr").value.trim();preview.textContent=a?`Others will see: "${partialAddress(a)}" and your flag about 50 m away.`:"Others will see your flag about 50 m away."};
   const langs=h("div",{class:"langs"});
   for(const l of LANGS){const c=h("input",{type:"checkbox",id:"lang-"+l,value:l});c.checked=(f.languages||[]).includes(l);langs.append(h("label",{for:"lang-"+l},c,l))}
   const m=activeMsg(f);
@@ -755,7 +756,7 @@ async function openForm(id){
     const address=$("f-addr").value.trim(),contact=$("f-contact").value.trim();
     const lat=r6(pos[0]),lng=r6(pos[1]);
     let dLat=0,dLng=0;
-    if(priv&&priv.lat===lat&&priv.lng===lng&&(priv.dLat||priv.dLng)){dLat=priv.dLat;dLng=priv.dLng}else{[dLat,dLng]=makeFuzz(lat)}
+    if(priv&&priv.lat===lat&&priv.lng===lng&&(priv.dLat||priv.dLng)){[dLat,dLng]=makeFuzz(lat,Math.atan2(priv.dLng*Math.cos(lat*Math.PI/180),priv.dLat))}else{[dLat,dLng]=makeFuzz(lat)}
     const pub={name,lat:lp?lat:r6(lat+dLat),lng:lp?lng:r6(lng+dLng),approx:!lp,locPublic:lp,contactPublic:cp,
       street:partialAddress(address),address:lp?address:"",contact:cp?contact:"",
       profession:$("f-prof").value.trim(),interests:$("f-int").value.trim(),
