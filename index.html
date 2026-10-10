@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,8 +28,8 @@
   .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7)}
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden;padding:env(safe-area-inset-top,0) 0 0}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden;position:fixed;inset:0;padding:env(safe-area-inset-top,0) 0 0;touch-action:manipulation}
 [hidden]{display:none!important}
 .app{height:100%;display:flex;flex-direction:column}
 header{display:flex;align-items:center;gap:8px 10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap;z-index:1000}
@@ -49,6 +52,8 @@ button:disabled{opacity:.5;cursor:default}
 .stage{position:relative;flex:1;min-height:0}
 #map{position:absolute;inset:0;background:var(--bg)}
 .leaflet-container{font-family:var(--body)}
+.leaflet-tile-container img.leaflet-tile{mix-blend-mode:normal;outline:1px solid transparent}
+.leaflet-tile-pane{will-change:transform}
 .placing #map{cursor:crosshair}
 .overlay{position:absolute;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(3px)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;width:min(380px,100%);max-height:100%;overflow:auto;box-shadow:0 12px 32px rgba(0,0,0,.15)}
@@ -118,15 +123,15 @@ textarea{resize:vertical;min-height:64px}
 .intro{position:fixed;inset:0;z-index:5000;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px;text-align:center;cursor:pointer;transition:opacity .5s ease,visibility .5s}
 .intro.out{opacity:0;visibility:hidden}
 .intro svg{width:min(300px,78vw);height:auto;overflow:visible}
-.intro .river{fill:none;stroke-linecap:round;stroke-dasharray:400;stroke-dashoffset:400;animation:draw 1.3s cubic-bezier(.5,0,.2,1) forwards}
+.intro .river{fill:none;stroke-linecap:round;stroke-dasharray:400;stroke-dashoffset:400;animation:draw .9s cubic-bezier(.5,0,.2,1) forwards}
 .intro .rhine{stroke:#7fb3cc;stroke-width:9}
-.intro .mosel{stroke:#9cc8da;stroke-width:6;animation-delay:.25s}
-.intro .pole{fill:var(--ink);transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);animation:rise .45s .95s cubic-bezier(.3,1.4,.5,1) forwards}
-.intro .pen{fill:var(--accent);transform-box:fill-box;transform-origin:left center;transform:scaleX(0);animation:unfurl .4s 1.35s ease-out forwards,wave 1.6s 1.75s ease-in-out infinite}
-.intro .glow{fill:var(--accent);opacity:0;transform-box:fill-box;transform-origin:center;animation:glow 1.2s 1.3s ease-out forwards}
-.intro h1{font-family:var(--display);font-size:clamp(24px,6vw,34px);margin:14px 0 0;letter-spacing:-.01em;opacity:0;animation:up .6s 1.2s ease-out forwards}
-.intro .te{font-family:var(--telugu);font-size:clamp(18px,4.5vw,22px);color:var(--muted);opacity:0;animation:up .6s 1.4s ease-out forwards}
-.intro .skip{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));font-size:12.5px;color:var(--muted);opacity:0;animation:up .4s 1.8s forwards}
+.intro .mosel{stroke:#9cc8da;stroke-width:6;animation-delay:.15s}
+.intro .pole{fill:var(--ink);transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);animation:rise .35s .65s cubic-bezier(.3,1.4,.5,1) forwards}
+.intro .pen{fill:var(--accent);transform-box:fill-box;transform-origin:left center;transform:scaleX(0);animation:unfurl .3s .95s ease-out forwards,wave 1.6s 1.25s ease-in-out infinite}
+.intro .glow{fill:var(--accent);opacity:0;transform-box:fill-box;transform-origin:center;animation:glow 1s .9s ease-out forwards}
+.intro h1{font-family:var(--display);font-size:clamp(24px,6vw,34px);margin:14px 0 0;letter-spacing:-.01em;opacity:0;animation:up .5s .8s ease-out forwards}
+.intro .te{font-family:var(--telugu);font-size:clamp(18px,4.5vw,22px);color:var(--muted);opacity:0;animation:up .5s .95s ease-out forwards}
+.intro .skip{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));font-size:12.5px;color:var(--muted);opacity:0;animation:up .4s 1.2s forwards}
 @keyframes draw{to{stroke-dashoffset:0}}
 @keyframes rise{to{transform:scaleY(1)}}
 @keyframes unfurl{to{transform:scaleX(1)}}
@@ -187,7 +192,9 @@ window.FIREBASE_CONFIG = {
   window.__introDone=new Promise(function(r){resolve=r});
   function finish(){if(done)return;done=true;el.classList.add("out");resolve();setTimeout(function(){el.hidden=true},550)}
   var reduce=false;try{reduce=matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}
-  setTimeout(finish,reduce?300:2800);
+  var seen=false;try{seen=sessionStorage.getItem("introSeen")==="1";sessionStorage.setItem("introSeen","1")}catch(e){}
+  if(seen){el.hidden=true;done=true;resolve();return}
+  setTimeout(finish,reduce?300:1900);
   el.addEventListener("click",finish);
 })();
 </script>
@@ -222,7 +229,7 @@ window.FIREBASE_CONFIG = {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- constants ----------
 const KOBLENZ=[50.356,7.594];
@@ -248,7 +255,7 @@ function closeSheet(){sheet.hidden=true;sheet.textContent="";openId=null}
 
 // ---------- map ----------
 const map=L.map("map",{zoomControl:true,attributionControl:true}).setView(KOBLENZ,13);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,keepBuffer:4,updateWhenIdle:false,crossOrigin:true,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
 map.zoomControl.setPosition("bottomleft");
 
 // ---------- config check ----------
@@ -257,7 +264,8 @@ if(!cfg.apiKey||cfg.apiKey.startsWith("PASTE")){
   const a=$("auth");a.hidden=false;a.append(h("div",{class:"card"},h("h2",null,"Almost ready"),h("p",null,"Paste your Firebase config into index.html (near the top, inside FIREBASE_CONFIG), then reload. See SETUP.md.")));
   throw new Error("Firebase config missing");
 }
-const app=initializeApp(cfg), auth=getAuth(app), db=getFirestore(app);
+const app=initializeApp(cfg), auth=getAuth(app);
+let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){db=getFirestore(app)}
 
 // ---------- state ----------
 let me=null, isAdmin=false, families=new Map(), seen={}, openId=null, placing=null;
