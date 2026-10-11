@@ -427,7 +427,7 @@ window.FIREBASE_CONFIG = {
     <path class="pen" d="M176.5 42 L216 54 L176.5 66 Z"/>
   </svg>
   <h1>Koblenz Telugu Families</h1>
-  <div class="te">మన కుటుంబాలు · కలిసి ఉందాం</div>
+  <div class="te">రండి, మనవాళ్ళని కలుద్దాం</div>
   <div class="skip">Tap to skip</div>
 </div>
 <script>
@@ -503,7 +503,9 @@ const ICONS={
   trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',chev:'<path d="m9 6 6 6-6 6"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   pin:'<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',check:'<path d="m5 12 5 5 9-10"/>',
-  send:'<path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>'
+  send:'<path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
+  bulb:'<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>',
+  inbox:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>'
 };
 function icon(n,size=20){const s=document.createElementNS("http://www.w3.org/2000/svg","svg");for(const [k,v] of Object.entries({viewBox:"0 0 24 24",width:size,height:size,fill:"none",stroke:"currentColor","stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round","aria-hidden":"true"}))s.setAttribute(k,v);s.innerHTML=ICONS[n]||"";return s}
 const AV_COLORS=["#c97a0a","#c0563a","#2e8b7a","#5566b8","#9152a0","#3f8f4f","#b4527a","#2f7fa6"];
@@ -564,6 +566,7 @@ function initMap(){
   map.touchZoomRotate.disableRotation();
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-left");
   map.addControl(new maplibregl.AttributionControl({compact:true}),"top-right");
+  const foldCredits=()=>{const a=document.querySelector(".maplibregl-ctrl-attrib");if(a)a.classList.remove("maplibregl-compact-show")};map.once("idle",foldCredits);setTimeout(foldCredits,1500);
   map.on("load",()=>{houseNumberLayers=(map.getStyle().layers||[]).filter(l=>l["source-layer"]==="housenumber").map(l=>l.id);showHouseNumbers(!!placing)});
   map.on("click",onMapClick);map.on("zoomend",scaleFlags);map.on("moveend",scaleFlags);map.on("dragstart",hideKeyboard);
   if(me)$("mapkey").hidden=false;
@@ -600,6 +603,7 @@ let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManag
 let me=null, isAdmin=false, families=new Map(), privates=new Map(), seen={}, openId=null, placing=null, famLoaded=false, lastCount=0;
 let outReq=new Map(), inReq=new Map();   // keyed by the other person's id
 const markers=new Map(), privSubs=new Map(); let unsubs=[]; let migrated=false;
+let mySugg=[], allSugg=[], justAdded=null;   // suggestions: my own, and (admin only) everyone's
 
 function connStatus(id){
   const o=outReq.get(id),i=inReq.get(id);
@@ -661,7 +665,7 @@ function authError(code){return({
 
 onAuthStateChanged(auth,async user=>{
   unsubs.forEach(u=>u());unsubs=[];for(const u of privSubs.values())u();privSubs.clear();privates.clear();
-  families.clear();outReq.clear();inReq.clear();famLoaded=false;redrawFlags();if(!sheet.hidden)closeSheet();
+  families.clear();outReq.clear();inReq.clear();famLoaded=false;mySugg=[];allSugg=[];redrawFlags();if(!sheet.hidden)closeSheet();
   $("welcome").hidden=true;document.body.classList.toggle("loggedout",!user);
   if(!user){me=null;isAdmin=false;refresh();$("mapkey").hidden=true;$("loading").hidden=true;await introDone;if(!auth.currentUser)showAuth();return}
   me=user.uid;$("auth").hidden=true;$("loading").hidden=false;if(map)$("mapkey").hidden=false;refresh();
@@ -674,6 +678,9 @@ onAuthStateChanged(auth,async user=>{
     if(isAdmin&&!migrated){migrated=true;migrateOldFlags()}
   },()=>{gotFam();$("loading").hidden=true;toast("Couldn't load the families. Reload to try again.")}));
   unsubs.push(onSnapshot(doc(db,"seen",me),s=>{seen=s.exists()&&s.data().seen?{...s.data().seen}:{};refresh();gotSeen()},()=>gotSeen()));
+  const sortS=a=>a.sort((x,y)=>y.createdAt-x.createdAt);
+  unsubs.push(onSnapshot(query(collection(db,"suggestions"),where("from","==",me)),snap=>{mySugg=sortS(snap.docs.map(d=>({id:d.id,...d.data()})));if(sheet.dataset.mode==="suggest")showSuggest(true)},()=>{}));
+  if(isAdmin)unsubs.push(onSnapshot(collection(db,"suggestions"),snap=>{allSugg=sortS(snap.docs.map(d=>({id:d.id,...d.data()})));refresh();if(sheet.dataset.mode==="inbox")showInbox(true);if(sheet.dataset.mode==="activity")showActivity(true)},()=>{}));
   const onReq=()=>{syncPrivateSubs();refresh();
     if(openId&&sheet.dataset.mode==="family")openFamily(openId,true);
     if(sheet.dataset.mode==="activity")showActivity(true);
@@ -748,10 +755,11 @@ function scaleFlags(){
 }
 
 function unreadCount(){return[...families.values()].filter(f=>{const m=activeMsg(f);return m&&f.id!==me&&seen[f.id]!==m.postedAt}).length}
+function newSuggCount(){return isAdmin?allSugg.filter(x=>x.status==="new").length:0}
 function pendingCount(){return[...inReq.values()].filter(r=>r.status==="pending").length}
 function refresh(){
   redrawFlags();
-  const n=me?unreadCount()+pendingCount():0;
+  const n=me?unreadCount()+pendingCount()+newSuggCount():0;
   const bell=$("bellBtn"),c=$("bellCount");bell.hidden=!me;c.hidden=!n;c.textContent=n>9?"9+":String(n);
   if(n>lastCount){c.classList.remove("bump");void c.offsetWidth;c.classList.add("bump")}lastCount=n;
   bell.setAttribute("aria-label",n?`Activity, ${n} new`:"Activity");
@@ -844,6 +852,7 @@ function openFamily(id,refreshOnly){
   else if(st==="none"&&families.has(me))qa.append(h("button",{class:"primary",type:"button",onclick:()=>{const b=$("connect-box");if(b){b.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{const t=$("c-note");if(t)t.focus({preventScroll:true})},450)}}},icon("people",17),"Connect"));
   if(qa.children.length)sheet.append(qa);
   if(st==="incoming")sheet.append(connectBox(f));
+  if(mine&&justAdded===me&&!activeMsg(f))sheet.append(h("div",{class:"card hl",style:"margin:0 0 14px"},h("h3",null,"Say hello to the community?"),h("p",null,"Post a short message so others know you've joined. Everyone sees a red dot on your flag."),h("div",{class:"inline"},h("button",{class:"primary",type:"button",onclick:()=>{justAdded=null;showPostMessage()}},icon("chat",17),"Post a message"),h("button",{class:"ghost",type:"button",onclick:()=>{justAdded=null;openFamily(me,true)}},"Not now"))));
   const m=activeMsg(f);
   if(m)sheet.append(h("div",{class:"msg"},h("div",{class:"lbl"},icon("chat",14),mine?"Your message":"Message to the community"),h("p",null,m.text),h("div",{class:"when"},`Posted ${fmtDate(m.postedAt)} · ${fmtLeft(m.expiresAt-now())}`)));
   const dl=h("dl"),add=(k,v)=>{if(v==null||v==="")return;dl.append(h("dt",null,k),h("dd",null,v))};
@@ -889,14 +898,19 @@ function showActivity(refreshOnly){
   if(!incoming.length)sheet.append(h("p",{class:"empty-line"},"No requests waiting."));
   for(const r of incoming)sheet.append(reqCard(r));
   const msgs=[...families.values()].filter(f=>activeMsg(f)).sort((a,b)=>b.message.postedAt-a.message.postedAt);
-  sheet.append(h("div",{class:"section-title"},"Messages"));
-  if(!msgs.length)sheet.append(h("p",{class:"empty-line"},families.has(me)?"No messages right now. Post one from your family's flag.":"No messages right now."));
+  sheet.append(h("div",{class:"section-title"},"Community messages"));
+  const mineF=families.get(me);
+  sheet.append(mineF?h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:10px",onclick:showPostMessage},icon("chat",18),activeMsg(mineF)?"Change my message":"Post a message")
+    :h("p",{class:"note",style:"margin-top:0"},"Add your family to the map to post messages. ",h("button",{class:"link",type:"button",onclick:()=>openForm(me)},"Add my family")));
+  if(!msgs.length)sheet.append(h("p",{class:"empty-line"},"No messages right now."));
   const list=h("div",{class:"list"});
   for(const f of msgs){const unread=f.id!==me&&seen[f.id]!==f.message.postedAt;
     list.append(h("button",{class:"person",type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},avatar(f.name,"sm"),
       h("span",{class:"tx"},h("b",null,f.id===me?`${f.name} (you)`:f.name||"Family"),h("span",null,f.message.text),h("small",{style:"color:var(--muted);font-size:12px"},`${fmtDate(f.message.postedAt)} · ${fmtLeft(f.message.expiresAt-now())}`)),
       unread?h("span",{class:"udot","aria-label":"New"}):null))}
   sheet.append(list);
+  const ns=newSuggCount();
+  if(isAdmin&&ns)sheet.append(h("div",{class:"section-title"},"Suggestions for you",h("span",{class:"n"},String(ns))),h("button",{type:"button",style:"width:100%",onclick:showInbox},icon("inbox",18),`Open suggestions inbox (${ns} new)`));
 }
 
 // ---------- connections ----------
@@ -937,9 +951,62 @@ function showMenu(){
     row("flag",mine?"My family":"Add my family",mine?"See and edit your flag":"Put your family on the map",()=>{if(mine){focusFamily(mine);openFamily(me)}else openForm(me)}),
     mine?row("chat",activeMsg(mine)?"Change my message":"Post a message","Shows a red dot on your flag",showPostMessage):null,
     row("people","My connections",`${conns} connected`,()=>showConnections(),pend?h("span",{class:"n"},`${pend} new`):null),
+    row("bulb","Suggest an idea","Ideas or problems, straight to the admin",()=>showSuggest()),
+    isAdmin?row("inbox","Suggestions inbox","Only you can see this",()=>showInbox(),newSuggCount()?h("span",{class:"n"},`${newSuggCount()} new`):null):null,
     row("info","How it works & privacy","Flags, connections, who sees what",showAbout),
     row("logout","Log out",null,()=>signOut(auth))));
   sheet.append(h("div",{style:"margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"},h("button",{class:"linkdanger",type:"button",onclick:showDelete},icon("trash",16),"Delete my account")));
+}
+
+// ---------- suggestions to the admin ----------
+const STYPES=[["idea","Idea"],["problem","Problem"],["other","Other"]];
+const SSTATUS={new:"Sent",seen:"Seen by admin",done:"Done"};
+function showSuggest(refreshOnly){
+  if(refreshOnly)rerenderSheet("suggest");else openSheet("suggest");
+  sheet.append(head("Suggest an idea","Help make the map better for everyone"));
+  const ta=h("textarea",{id:"sg-text",maxlength:600,rows:4,placeholder:"e.g. It would be nice to see families with kids of the same age."});
+  const counter=h("span",{class:"counter"});const upd=()=>counter.textContent=`${ta.value.length}/600`;ta.oninput=upd;upd();
+  const err=h("div",{class:"err",role:"alert"});
+  const send=h("button",{class:"primary grow",type:"button"},icon("send",17),"Send to admin");
+  send.onclick=async()=>{const t=ta.value.trim();if(!t){err.textContent="Write your suggestion first.";ta.focus();return}
+    send.disabled=true;err.textContent="";
+    const mine=families.get(me),email=auth.currentUser&&auth.currentUser.email||"";
+    try{await setDoc(doc(collection(db,"suggestions")),{from:me,fromName:(mine&&mine.name||"No flag yet").slice(0,60),email,type:sheet.querySelector('input[name="sg-type"]:checked').value,text:t,status:"new",createdAt:now()});
+      ta.value="";upd();send.disabled=false;toast("Thank you! Sent to the admin",true)}
+    catch(x){send.disabled=false;err.textContent="Couldn't send it. Check your connection and try again."}};
+  sheet.append(h("div",{class:"fform"},
+    h("div",{class:"glabel"},"What is it about?"),
+    h("div",{class:"pills",role:"radiogroup","aria-label":"Type"},...STYPES.map(([v,l],i)=>h("label",{class:"pill"},h("input",{type:"radio",name:"sg-type",value:v,checked:i===0}),h("span",null,l)))),
+    h("label",{for:"sg-text"},"Your suggestion",ta),counter,
+    h("p",{class:"wprivacy",style:"margin:0"},icon("lock",17),h("span",null,"Only the admin can read this. They'll see your family name and email, so they can reply if needed.")),
+    err,h("div",{class:"actions",style:"margin-top:4px"},send)));
+  if(mySugg.length){
+    sheet.append(h("div",{class:"section-title"},"Your suggestions"));
+    for(const x of mySugg)sheet.append(h("div",{class:"req"},h("div",{class:"inline",style:"justify-content:space-between"},h("span",{class:"chip-s"+(x.status==="done"?" ok":"")},x.status==="done"?icon("check",13):null,SSTATUS[x.status]||"Sent"),h("small",{style:"color:var(--muted)"},`${(STYPES.find(t=>t[0]===x.type)||["","Idea"])[1]} · ${fmtDate(x.createdAt)}`)),h("div",{style:"white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px"},x.text)));
+  }
+}
+function showInbox(refreshOnly){
+  if(!isAdmin)return;
+  if(refreshOnly)rerenderSheet("inbox");else openSheet("inbox");
+  sheet.append(head("Suggestions inbox","From members. Only you can see this."));
+  if(!allSugg.length){sheet.append(h("p",{class:"empty-line"},"No suggestions yet."));return}
+  const groups=[["new","New"],["seen","Seen"],["done","Done"]];
+  for(const [st,label] of groups){
+    const items=allSugg.filter(x=>(x.status||"new")===st);if(!items.length)continue;
+    sheet.append(h("div",{class:"section-title"},label,st==="new"?h("span",{class:"n"},String(items.length)):h("span",{style:"font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400"},`(${items.length})`)));
+    for(const x of items){
+      const set=async(status,b)=>{b.disabled=true;try{await updateDoc(doc(db,"suggestions",x.id),{status})}catch(e){b.disabled=false;toast("Couldn't update it. Try again.")}};
+      const del=h("button",{class:"small danger",type:"button",onclick:async()=>{del.disabled=true;try{await deleteDoc(doc(db,"suggestions",x.id));toast("Deleted")}catch(e){del.disabled=false;toast("Couldn't delete it. Try again.")}}},icon("trash",14),"Delete");
+      const acts=h("div",{class:"actions",style:"margin:0"});
+      if(st!=="seen"&&st!=="done")acts.append(h("button",{class:"small",type:"button",onclick:e=>set("seen",e.currentTarget)},"Mark as seen"));
+      if(st!=="done")acts.append(h("button",{class:"small primary",type:"button",onclick:e=>set("done",e.currentTarget)},icon("check",14),"Done"));
+      else acts.append(h("button",{class:"small",type:"button",onclick:e=>set("seen",e.currentTarget)},"Reopen"));
+      acts.append(del);
+      sheet.append(h("div",{class:"req"},
+        h("div",{class:"top"},avatar(x.fromName,"sm"),h("div",{style:"flex:1;min-width:0"},h("b",null,x.fromName||"Member"),h("div",{style:"font-size:12.5px;color:var(--muted);overflow-wrap:anywhere"},`${(STYPES.find(t=>t[0]===x.type)||["","Idea"])[1]} · ${fmtDate(x.createdAt)} · ${x.email||""}`))),
+        h("div",{style:"white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px"},x.text),acts));
+    }
+  }
 }
 
 // ---------- about & privacy ----------
@@ -957,7 +1024,7 @@ function showAbout(){
       "Your exact location, full address and contact: you choose for each one, either everyone or only families you've connected with.",
       "The admin can see all details, including hidden ones, to keep the map safe and tidy.")),
     faq("How do connections work?",false,h("p",null,"Open a family's flag and send a request, with a short note if you like. When they accept, you both see each other's full address, contact and directions. You only connect once, and either of you can remove the connection at any time.")),
-    faq("How do messages work?",false,h("p",null,"Post a short message from your flag, like an event or a question. Everyone sees a red dot on your flag. It turns into a ring once they've read it, and disappears after the days you choose.")),
+    faq("How do messages work?",false,h("p",null,"Tap the bell (top right) and choose Post a message. Share an event or ask a question. Everyone sees a red dot on your flag. It turns into a ring once they've read it, and disappears after the days you choose.")),
     faq("Privacy: what's stored and where",false,ul(
       "Your email address, for logging in. Other members never see it.",
       "What you enter for your flag, your connections and requests, and which messages you've read.",
@@ -973,7 +1040,7 @@ function showDelete(){
   openSheet("delete");
   sheet.append(head("Delete your account?",null));
   sheet.append(h("p",{class:"lead",style:"margin-bottom:8px"},"This removes everything about you from the map, straight away:"),
-    h("ul",{class:"who-sees",style:"margin-bottom:12px"},...["Your flag, address and contact","Your message","Your connections and requests","Your login"].map(t=>h("li",null,icon("check",17),t))),
+    h("ul",{class:"who-sees",style:"margin-bottom:12px"},...["Your flag, address and contact","Your message","Your connections and requests","Your suggestions","Your login"].map(t=>h("li",null,icon("check",17),t))),
     h("p",{style:"margin:0 0 12px"},h("b",null,"This can't be undone.")));
   if(isAdmin)sheet.append(h("p",{class:"note"},h("b",null,"You're the admin. "),"Make someone else admin in Firebase first, so the map still has an admin."));
   const pw=h("input",{type:"password",id:"del-pw",autocomplete:"current-password"});
@@ -989,7 +1056,8 @@ async function deleteAccount(password){
   await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,password));
   const b1=writeBatch(db);b1.delete(doc(db,"families",me));b1.delete(doc(db,"private",me));b1.delete(doc(db,"seen",me));await b1.commit();
   const ids=new Set([...outReq.values(),...inReq.values()].map(r=>r.id));
-  if(ids.size){const b2=writeBatch(db);ids.forEach(id=>b2.delete(doc(db,"requests",id)));await b2.commit()}
+  mySugg.forEach(x=>ids.add("s:"+x.id));
+  if(ids.size){const b2=writeBatch(db);ids.forEach(id=>id.startsWith("s:")?b2.delete(doc(db,"suggestions",id.slice(2))):b2.delete(doc(db,"requests",id)));await b2.commit()}
   await deleteUser(u);
   try{await terminate(db);await clearIndexedDbPersistence(db)}catch(e){}
   try{sessionStorage.clear()}catch(e){}
@@ -1118,7 +1186,6 @@ async function openForm(id){
   const step=(n,title,tag,...kids)=>h("section",{class:"step"},h("div",{class:"step-h"},h("span",{class:"step-n"},String(n)),h("b",null,title),tag?h("span",{class:"tag"},tag):null),...kids);
   const langs=h("div",{class:"pills",role:"group","aria-label":"Languages"},...LANGS.map(l=>h("label",{class:"pill"},h("input",{type:"checkbox",name:"lang",value:l,checked:(f.languages||[]).includes(l)}),h("span",null,l))));
   const m=activeMsg(f);
-  const msgTa=h("textarea",{id:"f-msg",maxlength:240,rows:2,placeholder:"e.g. Bathukamma get-together on Saturday, all welcome!"});msgTa.value=m?m.text:"";
   const form=h("form",{novalidate:true,class:"fform"},
     step(1,"Your flag","Needed",
       inp("f-name","Family or display name",v(f.name),{extra:{maxlength:40,placeholder:"e.g. Rao family",autocomplete:"off"}}),
@@ -1136,9 +1203,6 @@ async function openForm(id){
       h("div",{class:"row2"},inp("f-mem","Family members",v(f.members),{type:"number",extra:{min:1,max:20,inputmode:"numeric"}}),inp("f-kids","Kids",v(f.kids),{type:"number",extra:{min:0,max:15,inputmode:"numeric"}})),
       h("div",{class:"glabel"},"Languages"),langs,
       inp("f-about","About us",v(f.about),{tag:"textarea",extra:{maxlength:200,rows:2,placeholder:"A line or two about your family"}})),
-    step(4,"Message to the community","Optional",
-      h("label",{for:"f-msg"},"Message",msgTa),
-      h("div",{class:"glabel"},"Show the red dot for"),dayPills("f-days",m?m.days:3)),
     err,
     families.has(id)&&!editingOther?h("button",{class:"linkdanger",type:"button",onclick:()=>confirmRemove(id)},icon("trash",16),"Delete my flag"):null,
     h("div",{class:"formbar"},h("button",{class:"primary",type:"submit"},icon("check",18),"Save"),h("button",{type:"button",onclick:()=>families.has(id)?openFamily(id):closeSheet()},"Cancel")));
@@ -1150,9 +1214,8 @@ async function openForm(id){
     if(!name){err.textContent="Add a family or display name (step 1).";$("f-name").focus();return}
     if(!pos){err.textContent="Place your flag on the map first (step 1).";placeBtn.focus();placeBtn.scrollIntoView({behavior:"smooth",block:"center"});return}
     const num=(x,max)=>{const n=parseInt(x,10);return Number.isFinite(n)&&n>=0&&n<=max?n:null};
-    const msgText=msgTa.value.trim(),days=+form.querySelector('input[name="f-days"]:checked').value||3;
-    let message=null;
-    if(msgText){if(m&&m.text===msgText&&m.days===days)message={text:m.text,days:m.days,postedAt:m.postedAt,expiresAt:m.expiresAt};else{const t=now();message={text:msgText,days,postedAt:t,expiresAt:t+days*86400000}}}
+    const message=m?{text:m.text,days:m.days,postedAt:m.postedAt,expiresAt:m.expiresAt}:null;
+    const isNew=!families.has(id);
     const lp=form.querySelector('input[name="loc"]:checked').value==="public";
     const cp=form.querySelector('input[name="contact"]:checked').value==="public";
     const address=$("f-addr").value.trim(),contact=$("f-contact").value.trim();
@@ -1169,7 +1232,8 @@ async function openForm(id){
     const btn=form.querySelector("button[type=submit]");btn.disabled=true;err.textContent="";
     try{
       const b=writeBatch(db);b.set(doc(db,"private",id),prv);b.set(doc(db,"families",id),pub);await b.commit();
-      families.set(id,{id,...pub});privates.set(id,prv);refresh();focusFamily(families.get(id));openFamily(id);toast("Saved",true);
+      if(isNew&&!editingOther)justAdded=id;
+      families.set(id,{id,...pub});privates.set(id,prv);refresh();focusFamily(families.get(id));openFamily(id);toast(isNew?"Your flag is on the map":"Saved",true);
     }catch(x){btn.disabled=false;err.textContent=x&&x.code==="permission-denied"?"You can't save this flag. Check that you're logged in to your own account.":"Couldn't save. Check your connection and try again."}
   };
 }
