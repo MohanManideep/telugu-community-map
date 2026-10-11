@@ -86,7 +86,8 @@ header{position:relative;z-index:1000;display:grid;grid-template-columns:minmax(
 .count.bump{animation:bump .5s var(--ease)}
 .search{grid-column:1/-1;position:relative}
 .search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
-.search input{padding:9px 14px 9px 38px;border-radius:999px;font-size:15px}
+.search{margin:0}
+.search input{padding:9px 14px 9px 38px;border-radius:999px;font-size:16px}
 @media (min-width:820px){
   header{grid-template-columns:auto minmax(0,1fr) auto;padding:10px 16px}
   .search{grid-column:2;grid-row:1;max-width:380px;width:100%;justify-self:center}
@@ -139,6 +140,10 @@ header{position:relative;z-index:1000;display:grid;grid-template-columns:minmax(
 /* ---------- flags ---------- */
 .flag-icon{width:0;height:0;cursor:pointer;background:none;border:0}
 .flag-icon.sel{z-index:5}
+.flag-icon .flag{transition:transform .25s ease,scale .3s var(--ease),translate .2s ease,opacity .3s ease}
+.flag-icon.dim .flag{opacity:.28}
+.flag-icon.dim .nm{visibility:hidden}
+.bestchip{font-size:11.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 8px;align-self:flex-start;margin-bottom:2px}
 .flag{position:relative;width:0;height:0;transform:scale(var(--s,1));transform-origin:0 0;transition:transform .25s ease,scale .3s var(--ease),translate .2s ease}
 .flag-icon.new .flag{animation:drop .6s var(--ease) var(--d,0ms) both}
 @media (hover:hover){.flag-icon:hover .flag{translate:0 -3px}}
@@ -312,6 +317,44 @@ details.faq li{margin-bottom:5px}
 .news li{font-size:14px;overflow-wrap:anywhere}
 .news li b::before{content:"● ";color:var(--dot)}
 
+
+/* ---------- welcome ---------- */
+.person .tx>.bestchip{display:inline-block;color:var(--accent);font-size:11.5px}
+.overlay .card.wl{width:min(410px,100%);padding:0 20px 20px}
+.wl-hero{margin:0 -20px 14px;padding:16px 10px 0;background:linear-gradient(180deg,var(--accent-soft),color-mix(in srgb,var(--accent-soft) 0%,var(--surface)));border-radius:20px 20px 0 0}
+.wl-svg{display:block;width:100%;height:auto;max-height:118px;overflow:visible}
+.wl-river{fill:none;stroke:#9cc8da;stroke-linecap:round;stroke-dasharray:420;stroke-dashoffset:420;animation:draw 1s cubic-bezier(.5,0,.2,1) forwards}
+.wl-river.b{stroke:#b8d8e4;animation-delay:.12s}
+.wf{transform-box:fill-box;transform-origin:bottom;animation:wdrop .6s var(--ease) both;animation-delay:calc(.35s + var(--i) * .14s)}
+.wf .p{stroke:var(--ink);stroke-width:2.4;stroke-linecap:round}
+.wf .b{fill:var(--ink)}
+.wf .f{fill:var(--accent);transform-box:fill-box;transform-origin:left center;animation:wave 2.6s ease-in-out infinite}
+.wf.you .f{fill:var(--mine)}
+.wl-link{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:link .7s 1.05s ease-out forwards}
+.wl-bub{transform-box:fill-box;transform-origin:bottom left;animation:bubIn .45s 1.6s var(--ease) both,float 3s 2.1s ease-in-out infinite}
+.wl-bub rect{fill:var(--surface);stroke:var(--accent);stroke-width:1.6}
+.wl-bub circle{fill:var(--accent)}
+.wl .hello{margin-top:2px}
+.wl h2{font-size:23px!important;text-wrap:balance}
+.wl .motive{color:var(--ink)!important;opacity:.85;font-size:14.5px!important;line-height:1.5;margin-bottom:12px!important}
+.wsteps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 14px}
+.ws{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;font-size:12.5px;line-height:1.3;padding:9px 5px;border-radius:14px;background:var(--surface-2)}
+.ws .ic{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.wprivacy{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);margin:0 0 14px}
+.wprivacy svg{flex:none;color:var(--ok);margin-top:1px}
+.avstack{display:flex;align-items:center;gap:10px;margin:0 0 16px;font-size:13.5px;color:var(--muted)}
+.avstack .avs{display:flex}
+.avstack .avatar{width:30px;height:30px;font-size:11.5px;border:2px solid var(--surface);margin-left:-8px}
+.avstack .avatar:first-child{margin-left:0}
+.wl .actions{position:sticky;bottom:-20px;z-index:2;margin:0 -20px -20px;padding:12px 20px 20px;background:var(--surface);border-top:1px solid var(--line)}
+.wl .actions .primary{flex:1;padding:12px}
+.avstack{margin-bottom:4px!important}
+.wl>*:not(.wl-hero){animation:fadeUp .5s var(--ease) both}
+.wl>*:nth-child(2){animation-delay:.15s}.wl>*:nth-child(3){animation-delay:.2s}.wl>*:nth-child(4){animation-delay:.25s}.wl>*:nth-child(5){animation-delay:.3s}.wl>*:nth-child(n+6){animation-delay:.35s}
+@keyframes wdrop{0%{opacity:0;transform:translateY(-16px)}60%{opacity:1;transform:translateY(2px)}100%{transform:none}}
+@keyframes link{to{stroke-dashoffset:0}}
+@keyframes bubIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 /* ---------- toast ---------- */
 .toast{position:absolute;left:50%;top:14px;translate:-50% 0;background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:999px;font-size:14px;z-index:2000;max-width:calc(100% - 32px);text-align:center;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
 .toast:not([hidden]){animation:toastIn .35s var(--ease)}
@@ -411,7 +454,7 @@ window.FIREBASE_CONFIG = {
       <button id="menuBtn" class="iconbtn av" type="button" aria-label="Menu" hidden></button>
       <button id="infoBtn" class="iconbtn" type="button" aria-label="How it works and privacy"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5h.01"/></svg></button>
     </div>
-    <div class="search" id="searchWrap" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search names, jobs, interests…" aria-label="Search families" autocomplete="off"></div>
+    <form class="search" id="searchWrap" role="search" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search names, jobs, interests…" aria-label="Search families" autocomplete="off" enterkeyhint="search"></form>
   </header>
   <div class="stage" id="stage">
     <div id="map" aria-label="Map of Koblenz with family flags"></div>
@@ -479,18 +522,18 @@ function makeFuzz(lat,angle){const a=angle==null?Math.random()*2*Math.PI:angle;r
 const r6=x=>+(+x).toFixed(6);
 
 // ---------- bottom sheet ----------
-let closeTimer=0;
+let closeTimer=0,selId=null,searchHits=null;
 function openSheet(mode){
   clearTimeout(closeTimer);
   const wasOpen=!sheet.hidden&&!sheet.classList.contains("closing");
   sheet.classList.remove("closing","noanim");sheet.classList.toggle("swap",wasOpen);sheet.classList.toggle("formmode",mode==="form");
   sheet.style.transform="";sheet.hidden=false;sheet.textContent="";sheet.scrollTop=0;sheet.dataset.mode=mode||"";
   sheet.append(h("div",{class:"grab","aria-hidden":"true"}));
-  openId=null;setSel(null);
+  openId=null;setSel(null);if(mode!=="search"){searchHits=null;applyDim()}
 }
 function rerenderSheet(mode){sheet.classList.add("noanim");sheet.textContent="";sheet.dataset.mode=mode;sheet.append(h("div",{class:"grab","aria-hidden":"true"}))}
 function closeSheet(){
-  if(sheet.hidden)return;openId=null;setSel(null);sheet.dataset.mode="";
+  if(sheet.hidden)return;openId=null;setSel(null);sheet.dataset.mode="";searchHits=null;applyDim();
   sheet.classList.add("closing");clearTimeout(closeTimer);
   closeTimer=setTimeout(()=>{sheet.hidden=true;sheet.textContent="";sheet.classList.remove("closing","swap","formmode","noanim")},210);
 }
@@ -504,10 +547,12 @@ function head(title,sub,avName){
  sheet.addEventListener("pointerdown",e=>{if(innerWidth>=820||!e.target.closest(".grab,.sheet-head")||e.target.closest("button,a,input,textarea,select"))return;drag={y:e.clientY,dy:0};sheet.setPointerCapture(e.pointerId);sheet.style.transition="none"});
  sheet.addEventListener("pointermove",e=>{if(!drag)return;drag.dy=Math.max(0,e.clientY-drag.y);sheet.style.transform=`translateY(${drag.dy}px)`});
  const end=()=>{if(!drag)return;const d=drag.dy;drag=null;sheet.style.transition="transform .22s ease";
-   if(d>90){sheet.style.transform="translateY(100%)";setTimeout(()=>{sheet.style.transition="";sheet.style.transform="";sheet.hidden=true;sheet.textContent="";sheet.classList.remove("swap","formmode","noanim");openId=null;setSel(null);sheet.dataset.mode=""},220)}
+   if(d>90){sheet.style.transform="translateY(100%)";setTimeout(()=>{sheet.style.transition="";sheet.style.transform="";sheet.hidden=true;sheet.textContent="";sheet.classList.remove("swap","formmode","noanim");openId=null;setSel(null);sheet.dataset.mode="";searchHits=null;applyDim()},220)}
    else{sheet.style.transform="";setTimeout(()=>sheet.style.transition="",230)}};
  sheet.addEventListener("pointerup",end);sheet.addEventListener("pointercancel",end);}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!sheet.hidden&&!placing)closeSheet()});
+function hideKeyboard(){const a=document.activeElement;if(a&&a.id==="q")a.blur()}
+sheet.addEventListener("touchstart",hideKeyboard,{passive:true});
 
 // ---------- map (loads in the background; the rest of the app works without it) ----------
 let map=null,houseNumberLayers=[];
@@ -520,12 +565,20 @@ function initMap(){
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-left");
   map.addControl(new maplibregl.AttributionControl({compact:true}),"top-right");
   map.on("load",()=>{houseNumberLayers=(map.getStyle().layers||[]).filter(l=>l["source-layer"]==="housenumber").map(l=>l.id);showHouseNumbers(!!placing)});
-  map.on("click",onMapClick);map.on("zoomend",scaleFlags);map.on("moveend",scaleFlags);
+  map.on("click",onMapClick);map.on("zoomend",scaleFlags);map.on("moveend",scaleFlags);map.on("dragstart",hideKeyboard);
   if(me)$("mapkey").hidden=false;
   refresh();return map;
 }
 const mapReady=loadMapLib().then(initMap).catch(()=>{$("mapErr").hidden=false;return null});
-function goTo(lat,lng,zoom){if(!map)return;map.easeTo({center:[lng,lat],zoom:zoom==null?map.getZoom():zoom,duration:700})}
+function sheetPad(){
+  const pad={top:70,bottom:60,left:50,right:50};
+  if(sheet.hidden||sheet.classList.contains("closing"))return pad;
+  if(innerWidth>=820){pad.right=sheet.offsetWidth+50;return pad}
+  const sh=$("stage").clientHeight;pad.bottom=Math.min(sheet.offsetHeight,sh*.84)+40;
+  if(pad.top+pad.bottom>sh-60)pad.bottom=Math.max(60,sh-140);
+  return pad;
+}
+function goTo(lat,lng,zoom){if(!map)return;map.easeTo({center:[lng,lat],zoom:zoom==null?map.getZoom():zoom,duration:800,padding:sheetPad(),essential:true})}
 let lastFlagClick=0;
 function onMapClick(e){
   if(placing){setTemp(e.lngLat.lat,e.lngLat.lng,null);return}
@@ -663,7 +716,8 @@ function makeFlagEl(id){
   el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();if(!placing)openFamily(id)}});
   return el;
 }
-function setSel(id){for(const [k,o] of markers)o.el.classList.toggle("sel",k===id)}
+function setSel(id){selId=id;for(const [k,o] of markers)o.el.classList.toggle("sel",k===id)}
+function applyDim(){for(const [k,o] of markers)o.el.classList.toggle("dim",!!searchHits&&!searchHits.has(k))}
 function redrawFlags(){
   for(const [id,o] of markers)if(!families.has(id)||(placing&&placing.id===id)){o.mk.remove();markers.delete(id)}
   if(!map)return;
@@ -677,9 +731,9 @@ function redrawFlags(){
     }else o.mk.setLngLat([p[1],p[0]]);
     o.el.setAttribute("aria-label",(f.name||"Family")+" flag");
     const html=flagHTML(f);if(o.el._h!==html){o.el.innerHTML=html;o.el._h=html}
-    o.el.classList.toggle("sel",f.id===openId);
+    o.el.classList.toggle("sel",f.id===selId);
   }
-  scaleFlags();
+  applyDim();scaleFlags();
 }
 // Flags grow when they're spread out and shrink when they're crowded together.
 function scaleFlags(){
@@ -711,7 +765,7 @@ function refresh(){
   else e.hidden=true;
 }
 setInterval(()=>{if(families.size)refresh()},60000);
-function focusFamily(f){const p=famPos(f);if(!p)return;if(map)goTo(p[0],p[1],Math.max(map.getZoom(),16));else mapReady.then(m=>{if(m)goTo(p[0],p[1],16)})}
+function focusFamily(f){const p=famPos(f);if(!p)return;const run=()=>goTo(p[0],p[1],Math.max(map.getZoom(),16));requestAnimationFrame(()=>{if(map)run();else mapReady.then(m=>{if(m)run()})})}
 $("fab").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
 $("bellBtn").onclick=()=>showActivity();
 $("menuBtn").onclick=showMenu;
@@ -964,19 +1018,30 @@ function showPostMessage(){
 }
 
 // ---------- family search ----------
-let qTimer=0;
-$("q").addEventListener("input",()=>{clearTimeout(qTimer);qTimer=setTimeout(runSearch,180)});
-$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();runSearch()}});
-function runSearch(){
-  const raw=$("q").value.trim(),q=norm(raw);if(!q){if(sheet.dataset.mode==="search")closeSheet();return}
+let qTimer=0,flyTimer=0;
+$("q").addEventListener("input",()=>{clearTimeout(qTimer);clearTimeout(flyTimer);qTimer=setTimeout(()=>runSearch(false),180);flyTimer=setTimeout(()=>runSearch(true),900)});
+$("searchWrap").addEventListener("submit",e=>{e.preventDefault();clearTimeout(qTimer);clearTimeout(flyTimer);hideKeyboard();runSearch(true)});
+// Name matches count most, then job and interests, then languages, "about us" and street.
+function matchScore(f,terms){
+  const a=visibleAddress(f);
+  const fields=[[f.name,6],[f.profession,3],[f.interests,3],[(f.languages||[]).join(" "),2],[f.about,1],[a&&a.text,1]].map(([t,w])=>[norm(t),w]).filter(x=>x[0]);
+  let total=0;
+  for(const t of terms){let best=0;for(const [txt,w] of fields){const words=txt.split(" ");const s=words.includes(t)?w*2:words.some(x=>x.startsWith(t))?w*1.5:txt.includes(t)?w:0;if(s>best)best=s}if(!best)return 0;total+=best}
+  return total;
+}
+function runSearch(fly){
+  const raw=$("q").value.trim(),q=norm(raw);
+  if(!q){if(sheet.dataset.mode==="search")closeSheet();searchHits=null;applyDim();return}
   const terms=q.split(" ");
-  const hits=[...families.values()].filter(f=>{const a=visibleAddress(f);const hay=norm([f.name,f.profession,f.interests,f.about,(f.languages||[]).join(" "),a&&a.text].filter(Boolean).join(" "));return terms.every(t=>hay.includes(t))});
+  const hits=[...families.values()].map(f=>({f,s:matchScore(f,terms)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).map(x=>x.f);
   if(sheet.dataset.mode==="search"&&!sheet.hidden)rerenderSheet("search");else openSheet("search");
+  searchHits=new Set(hits.map(f=>f.id));applyDim();
   sheet.append(head(hits.length?`${hits.length} famil${hits.length>1?"ies":"y"} found`:"No families found",`for "${raw}"`));
   const list=h("div",{class:"list"});
-  for(const f of hits)list.append(h("button",{class:"person",type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},avatar(f.name,"sm"),h("span",{class:"tx"},h("b",null,f.name||"Family"),h("span",null,[f.profession,f.interests].filter(Boolean).join(" · ")||"No details yet")),icon("chev",18)));
+  hits.forEach((f,i)=>list.append(h("button",{class:"person",type:"button",onclick:()=>{hideKeyboard();focusFamily(f);openFamily(f.id)}},avatar(f.name,"sm"),h("span",{class:"tx"},i===0&&hits.length>1?h("span",{class:"bestchip"},"Best match"):null,h("b",null,f.name||"Family"),h("span",null,[f.profession,f.interests].filter(Boolean).join(" · ")||"No details yet")),icon("chev",18))));
   if(!hits.length)list.append(h("p",{class:"empty-line"},"Try a shorter word, like a first name, a job or an interest."));
   sheet.append(list);
+  if(hits.length){setSel(hits[0].id);if(fly)focusFamily(hits[0])}
 }
 
 // ---------- placing the flag ----------
@@ -1110,6 +1175,16 @@ async function openForm(id){
 }
 
 // ---------- welcome ----------
+// The little scene at the top of the welcome: rivers, families' flags popping up, two of them connecting.
+function welcomeHero(){
+  const flag=(x,y,i,cls)=>`<g class="wf ${cls||""}" style="--i:${i}"><line class="p" x1="${x}" y1="${y}" x2="${x}" y2="${y-36}"/><path class="f" d="M${x+1} ${y-36} L${x+25} ${y-28} L${x+1} ${y-20}Z"/><circle class="b" cx="${x}" cy="${y}" r="3.4"/></g>`;
+  const d=h("div",{class:"wl-hero","aria-hidden":"true"});
+  d.innerHTML=`<svg class="wl-svg" viewBox="0 0 320 150"><path class="wl-river" stroke-width="9" d="M-10 132 C70 122 120 100 165 86 S265 48 330 32"/><path class="wl-river b" stroke-width="6" d="M-10 152 C55 148 120 114 165 86"/>`+
+    `<path class="wl-link" pathLength="1" d="M100 64 Q155 8 208 38"/>`+
+    flag(86,104,0,"you")+flag(206,80,1)+flag(150,136,2)+flag(268,120,3)+flag(42,142,4)+
+    `<g class="wl-bub"><rect x="222" y="6" width="46" height="26" rx="13"/><circle cx="235" cy="19" r="2.6"/><circle cx="245" cy="19" r="2.6"/><circle cx="255" cy="19" r="2.6"/></g></svg>`;
+  return d;
+}
 function maybeWelcome(user){
   let shown=false;try{shown=sessionStorage.getItem("welcomed")===me}catch(e){}
   if(shown)return;
@@ -1121,30 +1196,30 @@ function maybeWelcome(user){
   const others=[...families.values()].filter(f=>f.id!==me);
   const unread=others.filter(f=>{const m=activeMsg(f);return m&&seen[f.id]!==m.postedAt}).sort((a,b)=>b.message.postedAt-a.message.postedAt);
   const pend=pendingCount();
-  const famCount=families.size;
-  const stats=h("div",{class:"stats"},
-    h("div",{class:"stat"},h("b",null,String(famCount)),h("span",null,famCount===1?"family on the map":"families on the map")),
-    h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new message":"new messages")));
-  const card=h("div",{class:"card",role:"dialog","aria-modal":"true","aria-labelledby":"w-title",tabindex:"-1"});
+  const card=h("div",{class:"card wl",role:"dialog","aria-modal":"true","aria-labelledby":"w-title",tabindex:"-1"});
+  card.append(welcomeHero());
   if(!mine){
+    const ws=(ic,t)=>h("div",{class:"ws"},h("span",{class:"ic"},icon(ic,19)),t);
+    const n=others.length;
     card.append(
       h("p",{class:"hello"},"నమస్కారం!"),
-      h("h2",{id:"w-title"},"Welcome to the community map"),
-      h("p",null,others.length?`${others.length} Telugu ${others.length===1?"family is":"families are"} already here. Add yours so neighbours can find you.`:"You're one of the first here. Add your family and invite others from the WhatsApp group."),
-      stats,
-      h("ol",{class:"steps"},
-        h("li",null,"Add your family and put your flag on your home."),
-        h("li",null,"Choose who sees your exact address and contact."),
-        h("li",null,"Connect with families near you, and post a message to say hello.")),
+      h("h2",{id:"w-title"},"Find Telugu families near you"),
+      h("p",{class:"motive"},"Moving to a new city is easier when you know who lives nearby. This map helps Telugu families in Koblenz and around find each other, for festivals, playdates for the kids, a helping hand, or just a cup of chai."),
+      h("div",{class:"wsteps"},ws("flag","Put your flag on your home"),ws("people","Connect with families nearby"),ws("chat","Share news and meet up")),
+      h("p",{class:"wprivacy"},icon("lock",17),h("span",null,"You decide who sees your exact address and contact. Only members who log in can see the map.")),
+      h("div",{class:"avstack"},n?h("span",{class:"avs"},...others.slice(0,4).map(f=>avatar(f.name))):null,h("span",null,n?`${n} ${n===1?"family is":"families are"} already here`:"Be one of the first families on the map")),
       h("div",{class:"actions"},
         h("button",{class:"primary",type:"button",onclick:()=>{close();openForm(me)}},icon("plus",18),"Add my family"),
         h("button",{type:"button",onclick:close},"Look around first")));
   }else{
+    const famCount=families.size;
     card.append(
       h("p",{class:"hello"},"నమస్కారం!"),
       h("h2",{id:"w-title"},`Welcome back, ${mine.name||"friend"}`),
-      h("p",null,unread.length||pend?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
-      stats);
+      h("p",{class:"motive"},unread.length||pend?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
+      h("div",{class:"stats"},
+        h("div",{class:"stat"},h("b",null,String(famCount)),h("span",null,famCount===1?"family on the map":"families on the map")),
+        h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new message":"new messages"))));
     if(pend)card.append(h("p",{class:"note",style:"margin:0 0 10px"},h("b",null,`${pend} connection request${pend>1?"s":""}`)," waiting for your reply."));
     if(unread.length){const ul=h("ul",{class:"news"});for(const f of unread.slice(0,3))ul.append(h("li",null,h("b",null,f.name||"Family"),": ",f.message.text.length>70?f.message.text.slice(0,70)+"…":f.message.text));card.append(ul)}
     const first=pend||unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showActivity()}},pend?"See requests":"Read messages"):null;
