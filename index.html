@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
+<meta name="app-version" content="2026-10-11.5">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -355,6 +356,9 @@ details.faq li{margin-bottom:5px}
 @keyframes link{to{stroke-dashoffset:0}}
 @keyframes bubIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+/* ---------- update banner ---------- */
+.updbar{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));translate:-50% 0;z-index:1900;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--surface);padding:8px 8px 8px 16px;border-radius:999px;box-shadow:var(--shadow);font-size:14px;white-space:nowrap;animation:toastIn .35s var(--ease)}
+.updbar button{padding:7px 14px;border-radius:999px}
 /* ---------- toast ---------- */
 .toast{position:absolute;left:50%;top:14px;translate:-50% 0;background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:999px;font-size:14px;z-index:2000;max-width:calc(100% - 32px);text-align:center;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
 .toast:not([hidden]){animation:toastIn .35s var(--ease)}
@@ -470,6 +474,7 @@ window.FIREBASE_CONFIG = {
       <div class="actions"><button id="p-loc" type="button">Use my location</button><button id="p-done" class="primary grow" type="button" disabled>Done</button><button id="p-cancel" type="button">Cancel</button></div>
     </div>
     <div id="toast" class="toast" role="status" hidden></div>
+    <div id="updbar" class="updbar" role="status" hidden><span>A new version is ready</span><button class="primary" type="button" onclick="location.reload()">Update</button></div>
     <aside id="sheet" hidden></aside>
     <div id="auth" class="overlay" hidden></div>
     <div id="welcome" class="overlay" hidden></div>
@@ -589,6 +594,26 @@ function onMapClick(e){
   $("keyPop").hidden=true;$("keyBtn").setAttribute("aria-expanded","false");
   if(!sheet.hidden&&!["form","post","delete"].includes(sheet.dataset.mode))closeSheet();
 }
+
+// ---------- keep the app up to date ----------
+// GitHub Pages lets browsers reuse a saved copy for up to 10 minutes. We ask for a fresh copy
+// (which also refreshes the browser's saved one) and compare version numbers.
+const APP_VERSION=(document.querySelector('meta[name="app-version"]')||{}).content||"";
+if(/[?&]v=/.test(location.search))history.replaceState(null,"",location.pathname+location.hash);
+async function checkForUpdate(initial){
+  try{
+    const r=await fetch(location.pathname,{cache:"reload"});if(!r.ok)return;
+    const m=(await r.text()).match(/<meta name="app-version" content="([^"]+)"/);
+    if(!m||!APP_VERSION||m[1]===APP_VERSION)return;
+    let tried=null;try{tried=sessionStorage.getItem("autoUpdated")}catch(e){}
+    const busy=!!placing||(!sheet.hidden&&["form","post","suggest","delete"].includes(sheet.dataset.mode));
+    if(initial&&tried!==m[1]&&!busy){try{sessionStorage.setItem("autoUpdated",m[1])}catch(e){}location.reload();return}
+    $("updbar").hidden=false;
+  }catch(e){}
+}
+checkForUpdate(true);
+setInterval(()=>checkForUpdate(false),10*60000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkForUpdate(false)});
 
 // ---------- config check ----------
 const cfg=window.FIREBASE_CONFIG||{};
