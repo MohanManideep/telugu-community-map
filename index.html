@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
-<meta name="app-version" content="2026-10-11.10">
+<meta name="app-version" content="2026-10-11.11">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -352,8 +352,14 @@ details.faq li{margin-bottom:5px}
 .avstack .avs{display:flex}
 .avstack .avatar{width:30px;height:30px;font-size:11.5px;border:2px solid var(--surface);margin-left:-8px}
 .avstack .avatar:first-child{margin-left:0}
+.gs{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.wtips{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+.wtips li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--muted)}
+.wtips li svg{flex:none;margin-top:1px;color:var(--accent)}
+.wtips b{color:var(--ink);font-weight:600}
 .wl .actions{position:sticky;bottom:-20px;z-index:2;margin:0 -20px -20px;padding:12px 20px 20px;background:var(--surface);border-top:1px solid var(--line)}
 .wl .actions .primary{flex:1;padding:12px}
+.wl .actions button{white-space:nowrap}
 .avstack{margin-bottom:4px!important}
 .wl>*:not(.wl-hero){animation:fadeUp .5s var(--ease) both}
 .wl>*:nth-child(2){animation-delay:.15s}.wl>*:nth-child(3){animation-delay:.2s}.wl>*:nth-child(4){animation-delay:.25s}.wl>*:nth-child(5){animation-delay:.3s}.wl>*:nth-child(n+6){animation-delay:.35s}
@@ -1322,7 +1328,7 @@ function showMenu(){
     row("chat","Community","Messages and events from families",()=>showCommunity(),unseenPostsCount()?h("span",{class:"n"},`${unseenPostsCount()} new`):null),
     mine?row("plus","New post","Share news or plan an event",()=>showComposer()):null,
     row("people","My connections",`${conns} connected`,()=>showConnections(),pend?h("span",{class:"n"},`${pend} new`):null),
-    row("bulb","Suggest an idea","Ideas or problems, straight to the admin",()=>showSuggest()),
+    row("bulb","Suggest an idea","Ideas or problems, straight to the admins",()=>showSuggest()),
     isOwnerMe()?row("chart","Overview","Families, people and activity",()=>showOverview()):null,
     isOwnerMe()?row("lock","Admins","Give or remove admin access",()=>showAdmins()):null,
     isAdmin?row("inbox","Suggestions inbox","Only you can see this",()=>showInbox(),newSuggCount()?h("span",{class:"n"},`${newSuggCount()} new`):null):null,
@@ -1333,25 +1339,25 @@ function showMenu(){
 
 // ---------- suggestions to the admin ----------
 const STYPES=[["idea","Idea"],["problem","Problem"],["other","Other"]];
-const SSTATUS={new:"Sent",seen:"Seen by admin",done:"Done"};
+const SSTATUS={new:"Sent",seen:"Seen by an admin",done:"Done"};
 function showSuggest(refreshOnly){
   if(refreshOnly)rerenderSheet("suggest");else openSheet("suggest");
   sheet.append(head("Suggest an idea","Help make the map better for everyone"));
   const ta=h("textarea",{id:"sg-text",maxlength:600,rows:4,placeholder:"e.g. It would be nice to see families with kids of the same age."});
   const counter=h("span",{class:"counter"});const upd=()=>counter.textContent=`${ta.value.length}/600`;ta.oninput=upd;upd();
   const err=h("div",{class:"err",role:"alert"});
-  const send=h("button",{class:"primary grow",type:"button"},icon("send",17),"Send to admin");
+  const send=h("button",{class:"primary grow",type:"button"},icon("send",17),"Send to the admins");
   send.onclick=async()=>{const t=ta.value.trim();if(!t){err.textContent="Write your suggestion first.";ta.focus();return}
     send.disabled=true;err.textContent="";
     const mine=families.get(myFam()),email=auth.currentUser&&auth.currentUser.email||"";
     try{await setDoc(doc(collection(db,"suggestions")),{from:me,fromName:(mine&&mine.name||"No flag yet").slice(0,60),email,type:sheet.querySelector('input[name="sg-type"]:checked').value,text:t,status:"new",createdAt:now()});
-      ta.value="";upd();send.disabled=false;toast("Thank you! Sent to the admin",true)}
+      ta.value="";upd();send.disabled=false;toast("Thank you! Sent to the admins",true)}
     catch(x){send.disabled=false;err.textContent="Couldn't send it. Check your connection and try again."}};
   sheet.append(h("div",{class:"fform"},
     h("div",{class:"glabel"},"What is it about?"),
     h("div",{class:"pills",role:"radiogroup","aria-label":"Type"},...STYPES.map(([v,l],i)=>h("label",{class:"pill"},h("input",{type:"radio",name:"sg-type",value:v,checked:i===0}),h("span",null,l)))),
     h("label",{for:"sg-text"},"Your suggestion",ta),counter,
-    h("p",{class:"wprivacy",style:"margin:0"},icon("lock",17),h("span",null,"Only the admin can read this. They'll see your family name and email, so they can reply if needed.")),
+    h("p",{class:"wprivacy",style:"margin:0"},icon("lock",17),h("span",null,"Only the admins can read this. They'll see your family name and email, so they can reply if needed.")),
     err,h("div",{class:"actions",style:"margin-top:4px"},send)));
   if(mySugg.length){
     sheet.append(h("div",{class:"section-title"},"Your suggestions"));
@@ -1457,8 +1463,15 @@ function showAbout(){
   const faq=(q,open,...kids)=>h("details",{class:"faq",open},h("summary",null,q),h("div",{class:"faq-b"},...kids));
   const ul=(...items)=>h("ul",null,...items.map(t=>h("li",null,t)));
   sheet.append(
-    faq("What do the flags mean?",true,legendList()),
-    faq("Why do I need to log in?",false,h("p",null,"The map shows where families live, so only members who log in can see it. Logging in also makes sure only you can change your family's flag.")),
+    faq("Getting started",true,h("ol",{class:"gs"},
+      h("li",null,h("b",null,"Add my family"),", bottom right: put your flag on your home and fill in only what you want to share."),
+      h("li",null,h("b",null,"Tap any flag")," to see that family. Send a connection request to swap full address and contact."),
+      h("li",null,h("b",null,"Search"),", at the top: find families by name, job or interest."),
+      h("li",null,h("b",null,"Community"),", bottom left: messages and events from everyone."),
+      h("li",null,h("b",null,"The bell"),", top right: requests and replies meant for you."),
+      h("li",null,h("b",null,"The menu"),", your initial at the top right: your family, family members, connections, Suggest an idea, and this page."))),
+    faq("What do the flags mean?",false,legendList()),
+    faq("Why do I need to log in?",false,h("p",null,"The map shows where families live, so only members who log in can see it. Logging in also makes sure only your family can change your flag.")),
     faq("Who can see my details?",false,ul(
       "Everyone logged in: your family name, the first names of its members, street and postcode, what you do, interests, languages, \"about us\" and your posts.",
       "Your exact location, full address and contact: you choose for each one, either everyone or only families you've connected with.",
@@ -1470,15 +1483,16 @@ function showAbout(){
       h("p",null,"Everyone in a family can edit the flag, post, and handle connections, and anyone can leave at any time. If someone ends up in the wrong family, an admin can take them out.")),
     faq("Community: messages and events",false,h("p",null,"Tap Community (bottom left) to see what's happening. Tap New post to share news or ask a question. Turn on \"Add date & place\" to make it an event, and pin the place on the map if you like."),
       h("p",null,"Families can tap I'm going. Everyone sees how many are going; only the organiser sees who. Messages disappear after the days you choose, events after the day they happen.")),
-    faq("What does the bell show?",false,h("p",null,"Only things about you: connection requests, families who accepted your request, and families going to your events.")),
+    faq("What does the bell show?",false,h("p",null,"Only things about you: connection requests, families who accepted your request, families going to your events, and people asking to join your family.")),
+    faq("Ideas or problems?",false,h("p",null,"Open the menu and tap Suggest an idea. It goes straight to the admins, and you can see when they've read it.")),
     faq("Privacy: what's stored and where",false,ul(
       "Your email address, for logging in. Other members never see it.",
-      "What you enter for your flag, your posts and events, which events you're going to, your connections and requests, and which posts you've seen.",
+      "What you enter for your flag, which family you're in, your posts and events, which events you're going to, your connections and requests, and which posts you've seen.",
       "Everything is stored with Google Firebase. It's not used for ads and never sold or shared.",
       "The map comes from OpenFreeMap and OpenStreetMap. When you search for an address, the search text is sent to OpenStreetMap's address search (Nominatim).",
-      "Questions? Ask the admin in the community WhatsApp group.")),
+      "Questions? Ask the admins in the community WhatsApp group, or use Suggest an idea in the menu.")),
     faq("Deleting your account",false,h("p",null,"You can delete your account at any time. It removes your login straight away. If you're the only one in your family, it also removes your flag, details, posts and connections. If others are in your family, the flag stays with them."),me?h("button",{class:"danger",type:"button",onclick:showDelete},icon("trash",16),"Delete my account"):h("p",null,"Log in first, then open the menu (top right) and choose Delete my account.")));
-  if(me)sheet.append(h("details",{style:"margin-top:10px"},h("summary",{style:"font-size:13px;color:var(--muted);cursor:pointer"},"Your user ID (for admin setup)"),h("div",{style:"margin-top:6px"},copyRow(me))));
+  if(me)sheet.append(h("details",{style:"margin-top:10px"},h("summary",{style:"font-size:13px;color:var(--muted);cursor:pointer"},"Your user ID"),h("div",{style:"margin-top:6px"},copyRow(me))));
 }
 
 // ---------- delete account ----------
@@ -1879,7 +1893,7 @@ function maybeWelcome(user){
   const mine=families.get(myFam());
   const others=[...families.values()].filter(f=>f.id!==myFam());
   const unread=activePosts().filter(isUnseen).sort((a,b)=>b.createdAt-a.createdAt);
-  const pend=pendingCount();
+  const pend=pendingCount(),pj=pendingJoins().length;
   const card=h("div",{class:"card wl",role:"dialog","aria-modal":"true","aria-labelledby":"w-title",tabindex:"-1"});
   card.append(welcomeHero());
   if(!mine){
@@ -1892,22 +1906,26 @@ function maybeWelcome(user){
       h("div",{class:"wsteps"},ws("flag","Put your flag on your home"),ws("people","Connect with families nearby"),ws("chat","Share news and meet up")),
       h("p",{class:"wprivacy"},icon("lock",17),h("span",null,"You decide who sees your exact address and contact. Only members who log in can see the map.")),
       h("div",{class:"avstack"},n?h("span",{class:"avs"},...others.slice(0,4).map(f=>avatar(f.name))):null,h("span",null,n?`${n} ${n===1?"family is":"families are"} already here`:"Be one of the first families on the map")),
+      h("ul",{class:"wtips"},
+        h("li",null,icon("people",17),h("span",null,h("b",null,"Partner already on the map? "),"Ask them for an invite link, or tap your family's flag and choose Ask to join.")),
+        h("li",null,icon("info",17),h("span",null,h("b",null,"Need help any time? "),"Tap the round button with your initial (top right), then ",h("b",null,"How it works & privacy"),"."))),
       h("div",{class:"actions"},
         h("button",{class:"primary",type:"button",onclick:()=>{close();addFamily()}},icon("plus",18),"Add my family"),
-        h("button",{type:"button",onclick:close},"Look around first")),
-      h("p",{style:"margin:10px 0 0;font-size:13px;color:var(--muted)"},"Is your partner already on the map? Ask them for an invite link, or tap your family's flag and choose Ask to join."));
+        h("button",{type:"button",onclick:close},"Look around first")));
   }else{
     const famCount=families.size;
     card.append(
       h("p",{class:"hello"},"నమస్కారం!"),
       h("h2",{id:"w-title"},`Welcome back, ${mine.name||"friend"}`),
-      h("p",{class:"motive"},unread.length||pend?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
+      h("p",{class:"motive"},unread.length||pend||pj?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
       h("div",{class:"stats"},
         h("div",{class:"stat"},h("b",null,String(famCount)),h("span",null,famCount===1?"family on the map":"families on the map")),
         h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new post":"new posts"))));
     if(pend)card.append(h("p",{class:"note",style:"margin:0 0 10px"},h("b",null,`${pend} connection request${pend>1?"s":""}`)," waiting for your reply."));
+    if(pj)card.append(h("p",{class:"note",style:"margin:0 0 10px"},h("b",null,`${pj} ${pj>1?"people are":"person is"} asking`)," to join your family."));
     if(unread.length){const ul=h("ul",{class:"news"});for(const p of unread.slice(0,3))ul.append(h("li",null,h("b",null,p.asAdmin?ADMIN_NAME:nameOf(p.from,p.fromName)),": ",p.isEvent?`Event, ${fmtWhen(p.when)}: `:"",p.text.length>70?p.text.slice(0,70)+"…":p.text));card.append(ul)}
-    const first=pend?h("button",{class:"primary",type:"button",onclick:()=>{close();showNotifications()}},"See requests"):unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showCommunity()}},"See what's new"):null;
+    card.append(h("ul",{class:"wtips"},h("li",null,icon("info",17),h("span",null,"Everything about how the map works is in the menu: tap your initial (top right), then ",h("b",null,"How it works & privacy"),"."))));
+    const first=pend||pj?h("button",{class:"primary",type:"button",onclick:()=>{close();showNotifications()}},"See requests"):unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showCommunity()}},"See what's new"):null;
     card.append(h("div",{class:"actions"},first,h("button",{class:first?null:"primary",type:"button",onclick:()=>{close();focusFamily(mine)}},"Show my flag"),h("button",{type:"button",onclick:close},"Explore")));
   }
   w.append(card);
