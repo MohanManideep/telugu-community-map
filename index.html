@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
-<meta name="app-version" content="2026-10-11.6">
+<meta name="app-version" content="2026-10-11.7">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -492,15 +492,21 @@ window.FIREBASE_CONFIG = {
   <div class="skip">Tap to skip</div>
 </div>
 <script>
+// Plays every time someone comes to the site, also when they come back with the Back button.
+// Skipped only right after tapping the title (home) or the "Update" button, so those stay quick.
 (function(){
-  var el=document.getElementById("intro"),done=false,resolve;
+  var el=document.getElementById("intro"),done=false,resolve,timer=0;
   window.__introDone=new Promise(function(r){resolve=r});
-  function finish(){if(done)return;done=true;el.classList.add("out");resolve();setTimeout(function(){el.hidden=true},550)}
   var reduce=false;try{reduce=matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){}
-  var seen=false;try{seen=sessionStorage.getItem("introSeen")==="1";sessionStorage.setItem("introSeen","1")}catch(e){}
-  if(seen){el.hidden=true;done=true;resolve();return}
-  setTimeout(finish,reduce?300:1900);
-  el.addEventListener("click",finish);
+  function finish(){if(done)return;done=true;clearTimeout(timer);el.classList.add("out");resolve();setTimeout(function(){if(done)el.hidden=true},550)}
+  function play(){done=false;el.hidden=false;el.classList.remove("out");el.onclick=finish;timer=setTimeout(finish,reduce?300:1900)}
+  var skip=false;try{skip=sessionStorage.getItem("skipIntro")==="1";sessionStorage.removeItem("skipIntro")}catch(e){}
+  if(skip){el.hidden=true;done=true;resolve()}else play();
+  window.addEventListener("pageshow",function(e){
+    if(!e.persisted)return;
+    var c=el.cloneNode(true);el.replaceWith(c);el=c;play();   // a fresh copy restarts the animation
+  });
+  window.__skipIntroNext=function(){try{sessionStorage.setItem("skipIntro","1")}catch(e){}};
 })();
 </script>
 
@@ -532,7 +538,7 @@ window.FIREBASE_CONFIG = {
       <div class="actions"><button id="p-loc" type="button">Use my location</button><button id="p-done" class="primary grow" type="button" disabled>Done</button><button id="p-cancel" type="button">Cancel</button></div>
     </div>
     <div id="toast" class="toast" role="status" hidden></div>
-    <div id="updbar" class="updbar" role="status" hidden><span>A new version is ready</span><button class="primary" type="button" onclick="location.reload()">Update</button></div>
+    <div id="updbar" class="updbar" role="status" hidden><span>A new version is ready</span><button class="primary" type="button" onclick="window.__skipIntroNext&&window.__skipIntroNext();location.reload()">Update</button></div>
     <aside id="sheet" hidden></aside>
     <div id="auth" class="overlay" hidden></div>
     <div id="welcome" class="overlay" hidden></div>
@@ -876,6 +882,7 @@ function focusFamily(f){const p=famPos(f);if(!p)return;const run=()=>goTo(p[0],p
 $("fab").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
 $("bellBtn").onclick=()=>showNotifications();
 $("commBtn").onclick=()=>showCommunity();
+$("homeLink").addEventListener("click",()=>{if(window.__skipIntroNext)window.__skipIntroNext()});
 $("menuBtn").onclick=showMenu;
 $("infoBtn").onclick=showAbout;
 $("keyBtn").onclick=()=>{const p=$("keyPop");p.hidden=!p.hidden;$("keyBtn").setAttribute("aria-expanded",String(!p.hidden));if(!p.hidden&&!p.firstChild)p.append(legendList(true))};
