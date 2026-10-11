@@ -232,7 +232,8 @@ service cloud.firestore {
 
     // ---------- community posts: messages and events ----------
     function validPost(d) {
-      return d.keys().hasOnly(['from', 'fromName', 'text', 'createdAt', 'expiresAt', 'isEvent', 'when', 'place', 'lat', 'lng', 'going', 'asAdmin'])
+      return d.keys().hasOnly(['from', 'fromName', 'text', 'createdAt', 'expiresAt', 'isEvent', 'when', 'place', 'lat', 'lng', 'going', 'asAdmin', 'reactions'])
+        && (!('reactions' in d) || d.reactions is map)
         // Only admins can post as "Community admin".
         && (!('asAdmin' in d) || d.asAdmin == false || (d.asAdmin == true && isAdmin()))
         && d.from is string
@@ -258,6 +259,15 @@ service cloud.firestore {
           || (request.resource.data.going == resource.data.going - 1
                 && exists(goingPath(pid, f)) && !existsAfter(goingPath(pid, f)));
     }
+    // Reactions: everyone can set, change or remove only their own, from a fixed set.
+    function ownReaction() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+        && request.resource.data.reactions is map
+        && request.resource.data.reactions.size() <= 500
+        && request.resource.data.reactions.diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in request.resource.data.reactions)
+            || request.resource.data.reactions[request.auth.uid] in ['like', 'love', 'haha', 'wow', 'sad', 'pray']);
+    }
     // "I'm going" counts once per family (or per person without a family).
     function myGoingStep(pid) {
       return (exists(memPath()) && get(memPath()).data.fam != '' && goingStep(pid, get(memPath()).data.fam))
@@ -282,7 +292,9 @@ service cloud.firestore {
           && validPost(request.resource.data))
         // Anyone taps "I'm going" or undoes it: the count moves by exactly 1, together with their own entry.
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going'])
-          && myGoingStep(pid)));
+          && myGoingStep(pid))
+        // Anyone reacts to a post.
+        || ownReaction());
       allow delete: if signedIn()
         && (isMember(resource.data.from) || resource.data.from == request.auth.uid || isAdmin());
 

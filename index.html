@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
-<meta name="app-version" content="2026-10-11.11">
+<meta name="app-version" content="2026-10-11.12">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -399,6 +399,20 @@ details.faq li{margin-bottom:5px}
 .goers{list-style:none;margin:0;padding:10px 12px;background:var(--surface-2);border-radius:10px;font-size:14px;display:flex;flex-direction:column;gap:6px}
 .goers li{display:flex;align-items:center;gap:8px}
 .post .acts{display:flex;gap:6px;flex-wrap:wrap}
+.rbox{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.reacts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rchip{gap:4px;padding:3px 10px;border-radius:999px;font-size:15px;line-height:1.3;min-height:32px}
+.rchip span{font-size:12.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.rchip.on{border-color:var(--accent);background:var(--accent-soft)}
+.rchip.on span{color:var(--ink)}
+.rchip.add{color:var(--muted);padding:3px 9px;font-size:13px}
+.rchip.bump{animation:pop .35s var(--ease)}
+.rpick{display:flex;gap:2px;padding:4px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);border:1px solid var(--line);width:max-content;max-width:100%;animation:popIn .18s var(--ease)}
+.rpick button{font-size:23px;width:42px;height:42px;border-radius:50%;border:0;background:none;padding:0;box-shadow:none}
+.rpick button.on{background:var(--accent-soft)}
+.whor{border:0;background:none;padding:4px 2px;font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.rwho{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.rwho li{display:flex;gap:8px;align-items:flex-start}.rwho .e{font-size:17px;line-height:1.2;flex:none}
 .switch{flex-direction:row;align-items:center;gap:12px;cursor:pointer;color:var(--ink);padding:11px 12px;border:1.5px solid var(--line);border-radius:13px;position:relative;transition:border-color .15s,background-color .15s}
 .switch:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 .switch input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
@@ -561,7 +575,7 @@ window.FIREBASE_CONFIG = {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, writeBatch, increment, terminate, clearIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, writeBatch, increment, deleteField, terminate, clearIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- constants ----------
 const KOBLENZ=[50.356,7.594];
@@ -590,6 +604,7 @@ const ICONS={
   send:'<path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
   bulb:'<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>',
   cal:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  smile:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
   chart:'<path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/>',
   inbox:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>'
 };
@@ -1466,6 +1481,7 @@ function showAbout(){
     faq("Getting started",true,h("ol",{class:"gs"},
       h("li",null,h("b",null,"Add my family"),", bottom right: put your flag on your home and fill in only what you want to share."),
       h("li",null,h("b",null,"Tap any flag")," to see that family. Send a connection request to swap full address and contact."),
+      h("li",null,h("b",null,"Add your contact"),", like your phone or WhatsApp, and keep it for ",h("i",null,"Only connected families"),". Then families you connect with can reach you, and nobody else sees it."),
       h("li",null,h("b",null,"Search"),", at the top: find families by name, job or interest."),
       h("li",null,h("b",null,"Community"),", bottom left: messages and events from everyone."),
       h("li",null,h("b",null,"The bell"),", top right: requests and replies meant for you."),
@@ -1568,6 +1584,37 @@ function dirLinks(lat,lng){const dest=`${lat},${lng}`;
   const g=h("a",{class:"btnlink small",href:`https://www.google.com/maps/dir/?api=1&destination=${dest}`,target:"_blank",rel:"noopener"},"Google Maps ↗");
   const a=h("a",{class:"btnlink small",href:`https://maps.apple.com/?daddr=${dest}`,target:"_blank",rel:"noopener"},"Apple Maps ↗");
   const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend" in document);return ios?[a,g]:[g,a]}
+// ---------- reactions (like WhatsApp): one per person, on messages and events ----------
+const REACTS=[["like","👍"],["love","❤️"],["haha","😂"],["wow","😮"],["sad","😢"],["pray","🙏"]];
+const REACT_EMOJI=Object.fromEntries(REACTS);
+function personLabel(uid){if(uid===me)return"You";const p=personOf(uid);if(p)return p.name?`${p.name} (${p.fam.name||"Family"})`:(p.fam.name||"A member");return isAdminId(uid)?ADMIN_NAME:"A member"}
+async function setReaction(p,code){
+  try{await updateDoc(doc(db,"posts",p.id),{["reactions."+me]:code?code:deleteField()})}
+  catch(x){toast("Couldn't save your reaction. Try again.")}
+}
+function reactBox(p,full){
+  if(p.legacy||!me)return null;
+  const r=p.reactions&&typeof p.reactions==="object"?p.reactions:{},mine=REACT_EMOJI[r[me]]?r[me]:null;
+  const counts={};for(const u in r)if(REACT_EMOJI[r[u]])counts[r[u]]=(counts[r[u]]||0)+1;
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const box=h("div",{class:"rbox"}),row=h("div",{class:"reacts"});
+  const pick=h("div",{class:"rpick",role:"group","aria-label":"Choose a reaction",hidden:true},
+    ...REACTS.map(([c,e])=>h("button",{type:"button",class:mine===c?"on":null,"aria-label":c,"aria-pressed":String(mine===c),onclick:()=>{pick.hidden=true;setReaction(p,mine===c?null:c)}},e)));
+  for(const [c,e] of REACTS)if(counts[c])row.append(h("button",{class:"rchip"+(mine===c?" on":""),type:"button","aria-pressed":String(mine===c),
+    "aria-label":`${e} ${counts[c]}${mine===c?", including you. Tap to remove yours.":". Tap to react the same."}`,
+    onclick:e2=>{e2.currentTarget.classList.add("bump");setReaction(p,mine===c?null:c)}},e,h("span",null,String(counts[c]))));
+  row.append(h("button",{class:"rchip add",type:"button","aria-label":mine?"Change your reaction":"React","aria-expanded":"false",onclick:e=>{pick.hidden=!pick.hidden;e.currentTarget.setAttribute("aria-expanded",String(!pick.hidden))}},icon("smile",17),total?null:"React"));
+  if(total&&!full)row.append(h("button",{class:"whor",type:"button",onclick:()=>openPost(p.id)},"Who reacted"));
+  box.append(row,pick);
+  if(total&&full){
+    const list=h("ul",{class:"rwho"});
+    for(const [c,e] of REACTS){const who=Object.keys(r).filter(u=>r[u]===c);if(!who.length)continue;
+      who.sort((a,b)=>(a===me?-1:b===me?1:0));
+      list.append(h("li",null,h("span",{class:"e","aria-hidden":"true"},e),h("span",null,who.map(personLabel).join(", "))))}
+    box.append(h("div",{style:"margin-top:10px"},h("div",{style:"font-size:12.5px;color:var(--muted);margin-bottom:6px"},"Reactions"),list));
+  }
+  return box;
+}
 // One card for a message or an event, used in Community, on family sheets and for a single post.
 function postCard(p,opt={}){
   const mine=isMyPost(p),nm=p.asAdmin?ADMIN_NAME:nameOf(p.from,p.fromName),isNew=opt.newKeys?opt.newKeys.has(postKey(p)):false;
@@ -1592,6 +1639,7 @@ function postCard(p,opt={}){
       else acts.append(h("button",{class:"small",type:"button",onclick:()=>openPost(p.id)},icon("pin",15),"Show on map"));
       card.append(acts)}
   }else card.append(h("p",{class:"txt"},p.text));
+  const rb=reactBox(p,!!opt.full);if(rb)card.append(rb);
   if(mine||isAdmin){const acts=h("div",{class:"acts",style:"border-top:1px solid var(--line);padding-top:10px"});
     if(mine&&!p.legacy)acts.append(h("button",{class:"small",type:"button",onclick:()=>showComposer(p)},icon("edit",14),"Edit"));
     acts.append(h("button",{class:"small danger",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{if(p.legacy)await updateDoc(doc(db,"families",p.from),{message:null,updatedAt:now()});else await deletePost(p.id);toast(p.isEvent?"Event removed":"Post removed",true);if(sheet.dataset.mode==="postview")showCommunity()}catch(x){b.disabled=false;toast("Couldn't remove it. Try again.")}}},icon("trash",14),mine?"Delete":"Remove (admin)"));
@@ -1599,6 +1647,7 @@ function postCard(p,opt={}){
   return card;
 }
 function showCommunity(refreshOnly){
+  const sc=sheet.scrollTop;
   if(refreshOnly)rerenderSheet("community");else openSheet("community");
   const list=activePosts();
   if(!refreshOnly)commNew=new Set(list.filter(isUnseen).map(postKey));
@@ -1612,6 +1661,7 @@ function showCommunity(refreshOnly){
   sheet.append(h("div",{class:"section-title"},icon("chat",18),"Messages"));
   if(!msgs.length)sheet.append(h("p",{class:"empty-line"},"No messages right now."));
   for(const p of msgs)sheet.append(postCard(p,{newKeys:commNew}));
+  if(refreshOnly)sheet.scrollTop=sc;
   markPostsSeen(list);
 }
 function openPost(pid,refreshOnly){
@@ -1823,6 +1873,7 @@ async function openForm(id){
       h("div",{class:"glabel"},"Your exact location and full address"),
       h("div",{class:"choices",role:"radiogroup"},choice("loc","public",locPublic,"globe","Everyone on the map","Your flag sits on your home"),choice("loc","private",!locPublic,"lock","Only connected families",preview)),
       inp("f-contact","Contact (phone, WhatsApp or email)",v(fullContact),{extra:{maxlength:80}},true),
+      h("small",{style:"display:block;margin-top:-4px;color:var(--muted);font-size:12.5px"},"Add it so families you connect with can reach you. Keeping it for connected families is a good choice."),
       h("div",{class:"glabel"},"Your contact"),
       h("div",{class:"choices",role:"radiogroup"},choice("contact","public",contactPublic,"globe","Everyone on the map","Anyone logged in can see it"),choice("contact","private",!contactPublic,"lock","Only connected families","Recommended"))),
     step(3,"About you","Optional",
