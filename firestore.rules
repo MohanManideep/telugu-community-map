@@ -1,0 +1,216 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    // The map owner: the only one who can give or remove admin access.
+    function isOwner() { return signedIn() && request.auth.uid == 'JtAaorFROTMYQrzw1PDMpYStQRK2'; }
+    function isAdmin() {
+      return isOwner() || (signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    function optStr(d, k, max) {
+      return !(k in d) || (d[k] is string && d[k].size() <= max);
+    }
+    function optCount(d, k, max) {
+      return !(k in d) || d[k] == null || (d[k] is int && d[k] >= 0 && d[k] <= max);
+    }
+    function validMessage(m) {
+      return m == null || (
+        m is map && m.keys().hasOnly(['text', 'days', 'postedAt', 'expiresAt'])
+        && m.text is string && m.text.size() > 0 && m.text.size() <= 240
+        && m.days is int && m.days >= 1 && m.days <= 14
+        && m.postedAt is number && m.expiresAt is number
+        && m.expiresAt <= m.postedAt + 15 * 86400000
+      );
+    }
+    // Public part of a family's flag: everyone who is logged in can read it.
+    function validFamily(d) {
+      return d.keys().hasOnly(['name', 'lat', 'lng', 'address', 'profession', 'interests',
+                               'members', 'kids', 'languages', 'about', 'contact',
+                               'message', 'updatedAt', 'street', 'approx',
+                               'locPublic', 'contactPublic', 'v'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 40
+        && d.lat is number && d.lng is number
+        && d.lat > 47 && d.lat < 55.5 && d.lng > 5.5 && d.lng < 15.5
+        && optStr(d, 'address', 120) && optStr(d, 'street', 120)
+        && optStr(d, 'profession', 80) && optStr(d, 'interests', 120)
+        && optStr(d, 'about', 200) && optStr(d, 'contact', 80)
+        && optCount(d, 'members', 20) && optCount(d, 'kids', 15)
+        && (!('languages' in d) || (d.languages is list && d.languages.size() <= 10))
+        && (!('message' in d) || validMessage(d.message))
+        && (!('approx' in d) || d.approx is bool)
+        && (!('locPublic' in d) || d.locPublic is bool)
+        && (!('contactPublic' in d) || d.contactPublic is bool)
+        // Never put hidden details into the public part.
+        && (d.get('locPublic', true) == true || d.get('address', '') == '')
+        && (d.get('contactPublic', true) == true || d.get('contact', '') == '')
+        && d.updatedAt is number;
+    }
+    // Private part: exact position, full address, contact.
+    function validPrivate(d) {
+      return d.keys().hasOnly(['lat', 'lng', 'address', 'contact', 'dLat', 'dLng'])
+        && d.lat is number && d.lng is number
+        && optStr(d, 'address', 120) && optStr(d, 'contact', 80)
+        && d.dLat is number && d.dLng is number
+        && d.dLat < 0.01 && d.dLat > -0.01 && d.dLng < 0.01 && d.dLng > -0.01;
+    }
+    function accepted(path) {
+      return exists(path) && get(path).data.status == 'accepted';
+    }
+    function connectedTo(owner) {
+      return accepted(/databases/$(database)/documents/requests/$(request.auth.uid + '_' + owner))
+          || accepted(/databases/$(database)/documents/requests/$(owner + '_' + request.auth.uid));
+    }
+
+    // One flag per account: the document id is the member's user id.
+    match /families/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && (request.auth.uid == uid || isAdmin())
+        && validFamily(request.resource.data);
+      allow delete: if signedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // Only the family itself, connected families and the admin can read this.
+    match /private/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin() || connectedTo(uid));
+      allow create, update: if signedIn()
+        && (request.auth.uid == uid || isAdmin())
+        && validPrivate(request.resource.data);
+      allow delete: if signedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // Connection requests. Document id is "<from>_<to>".
+    match /requests/{rid} {
+      allow read: if signedIn()
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid || isAdmin());
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['from', 'to', 'note', 'fromName', 'status', 'createdAt'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.to is string
+        && request.resource.data.to != request.auth.uid
+        && rid == request.auth.uid + '_' + request.resource.data.to
+        && request.resource.data.status == 'pending'
+        && request.resource.data.note is string && request.resource.data.note.size() <= 200
+        && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 40
+        && request.resource.data.createdAt is number
+        && exists(/databases/$(database)/documents/families/$(request.auth.uid));
+      // Only the receiver answers, once.
+      allow update: if signedIn()
+        && resource.data.to == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt'])
+        && request.resource.data.status in ['accepted', 'declined'];
+      // Sender can cancel or remove a connection (but not erase a decline to ask again,
+      // unless they are deleting their account and their flag is already gone);
+      // receiver can remove a connection or clear a decline.
+      allow delete: if signedIn() && (
+        (resource.data.from == request.auth.uid
+          && (resource.data.status != 'declined'
+              || !exists(/databases/$(database)/documents/families/$(request.auth.uid))))
+        || resource.data.to == request.auth.uid
+        || isAdmin());
+    }
+
+    // Community posts: messages and events.
+    function validPost(d) {
+      return d.keys().hasOnly(['from', 'fromName', 'text', 'createdAt', 'expiresAt', 'isEvent', 'when', 'place', 'lat', 'lng', 'going', 'asAdmin'])
+        // Only admins can post as "Community admin".
+        && (!('asAdmin' in d) || d.asAdmin == false || (d.asAdmin == true && isAdmin()))
+        && d.fromName is string && d.fromName.size() <= 40
+        && d.text is string && d.text.size() > 0 && d.text.size() <= 400
+        && d.createdAt is number && d.expiresAt is number
+        && d.going is int && d.going >= 0
+        && d.isEvent is bool
+        && ((d.isEvent == true
+              && d.when is number && d.place is string && d.place.size() > 0 && d.place.size() <= 120
+              && d.expiresAt <= d.when + 2 * 86400000
+              && d.when <= d.createdAt + 400 * 86400000)
+          || (d.isEvent == false
+              && d.expiresAt <= d.createdAt + 15 * 86400000))
+        && (d.lat == null || (d.lat is number && d.lng is number
+              && d.lat > 47 && d.lat < 55.5 && d.lng > 5.5 && d.lng < 15.5));
+    }
+    function goingDoc(pid) {
+      return /databases/$(database)/documents/posts/$(pid)/going/$(request.auth.uid);
+    }
+    match /posts/{pid} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.going == 0
+        && validPost(request.resource.data)
+        // Families on the map can post; admins can post without a family.
+        && (exists(/databases/$(database)/documents/families/$(request.auth.uid)) || isAdmin());
+      allow update: if signedIn() && (
+        // The author edits their own post; the "going" count stays as it is.
+        (resource.data.from == request.auth.uid
+          && request.resource.data.from == resource.data.from
+          && request.resource.data.going == resource.data.going
+          && validPost(request.resource.data))
+        // Anyone taps "I'm going" or undoes it: the count moves by exactly 1, together with their own entry.
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going'])
+          && ((request.resource.data.going == resource.data.going + 1
+                && !exists(goingDoc(pid)) && existsAfter(goingDoc(pid)))
+            || (request.resource.data.going == resource.data.going - 1
+                && exists(goingDoc(pid)) && !existsAfter(goingDoc(pid))))));
+      allow delete: if signedIn() && (resource.data.from == request.auth.uid || isAdmin());
+
+      // Who is going: only that family, the organiser and the admin can see an entry.
+      match /going/{uid} {
+        allow read: if signedIn() && (request.auth.uid == uid
+          || get(/databases/$(database)/documents/posts/$(pid)).data.from == request.auth.uid
+          || isAdmin());
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['name', 'at'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 40
+          && request.resource.data.at is number
+          && getAfter(/databases/$(database)/documents/posts/$(pid)).data.going
+             == get(/databases/$(database)/documents/posts/$(pid)).data.going + 1;
+        allow delete: if signedIn() && (
+          (request.auth.uid == uid
+            && getAfter(/databases/$(database)/documents/posts/$(pid)).data.going
+               == get(/databases/$(database)/documents/posts/$(pid)).data.going - 1)
+          || get(/databases/$(database)/documents/posts/$(pid)).data.from == request.auth.uid
+          || isAdmin());
+      }
+    }
+
+    // Suggestions to the admin: members write their own, only the admin (and the writer) can read.
+    match /suggestions/{sid} {
+      allow read: if signedIn() && (resource.data.from == request.auth.uid || isAdmin());
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['from', 'fromName', 'email', 'type', 'text', 'status', 'createdAt'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 60
+        && request.resource.data.type in ['idea', 'problem', 'other']
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 600
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt is number;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['new', 'seen', 'done'];
+      allow delete: if isAdmin() || (signedIn() && resource.data.from == request.auth.uid);
+    }
+
+    // Which messages each member has already read (private to them).
+    match /seen/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Admins: everyone logged in can see who they are.
+    // Only the owner can give or remove admin access, and never to or from themselves.
+    match /admins/{uid} {
+      allow read: if signedIn();
+      allow create: if isOwner() && uid != request.auth.uid
+        && request.resource.data.keys().hasOnly(['role', 'name', 'addedAt'])
+        && request.resource.data.role == 'admin'
+        && request.resource.data.name is string && request.resource.data.name.size() <= 60
+        && request.resource.data.addedAt is number
+        && exists(/databases/$(database)/documents/families/$(uid));
+      allow delete: if isOwner() && uid != request.auth.uid;
+      allow update: if false;
+    }
+  }
+}
