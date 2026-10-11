@@ -195,22 +195,26 @@ service cloud.firestore {
     }
 
     // ---------- connections between families ----------
-    // Document id is "<from family>_<to family>".
+    // Document id is "<from family>_<to family>". An admin without a family can also connect,
+    // as the community admin: then "from" is their own user id.
     match /requests/{rid} {
       allow read: if signedIn()
         && (isMember(resource.data.from) || isMember(resource.data.to) || isAdmin());
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['from', 'to', 'note', 'fromName', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['from', 'to', 'note', 'fromName', 'status', 'createdAt', 'asAdmin'])
         && request.resource.data.from is string
-        && isMember(request.resource.data.from)
+        && ((isMember(request.resource.data.from)
+              && exists(famPath(request.resource.data.from))
+              && !('asAdmin' in request.resource.data))
+          || (request.resource.data.from == request.auth.uid && isAdmin()
+              && request.resource.data.get('asAdmin', false) == true))
         && request.resource.data.to is string
         && request.resource.data.to != request.resource.data.from
         && rid == request.resource.data.from + '_' + request.resource.data.to
         && request.resource.data.status == 'pending'
         && request.resource.data.note is string && request.resource.data.note.size() <= 200
         && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 40
-        && request.resource.data.createdAt is number
-        && exists(famPath(request.resource.data.from));
+        && request.resource.data.createdAt is number;
       // Only the receiving family answers, once.
       allow update: if signedIn()
         && isMember(resource.data.to)
@@ -220,7 +224,7 @@ service cloud.firestore {
       // Sender can cancel or remove a connection (but not erase a decline to ask again,
       // unless their flag is already gone); receiver can remove a connection or clear a decline.
       allow delete: if signedIn() && (
-        (isMember(resource.data.from)
+        ((isMember(resource.data.from) || resource.data.from == request.auth.uid)
           && (resource.data.status != 'declined' || !exists(famPath(resource.data.from))))
         || isMember(resource.data.to)
         || isAdmin());

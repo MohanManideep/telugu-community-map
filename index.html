@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
-<meta name="app-version" content="2026-10-11.9">
+<meta name="app-version" content="2026-10-11.10">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -584,6 +584,7 @@ const ICONS={
   send:'<path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
   bulb:'<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>',
   cal:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  chart:'<path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/>',
   inbox:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>'
 };
 function icon(n,size=20){const s=document.createElementNS("http://www.w3.org/2000/svg","svg");for(const [k,v] of Object.entries({viewBox:"0 0 24 24",width:size,height:size,fill:"none",stroke:"currentColor","stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round","aria-hidden":"true"}))s.setAttribute(k,v);s.innerHTML=ICONS[n]||"";return s}
@@ -718,6 +719,9 @@ let lastInvite=null;   // the invite link made in this visit, shown again when t
 let memDoc, myJoin=null, joinReqs=new Map(), famUnsubs=[], famSubKey, gotIn=()=>{}, pendingInvite=null;
 function myFam(){if(!me)return null;if(memDoc&&typeof memDoc.fam==="string")return memDoc.fam&&families.has(memDoc.fam)?memDoc.fam:null;return families.has(me)?me:null}
 const goingId=()=>myFam()||me;
+// Who I connect as: my family, or (for an admin without a family) myself as the community admin.
+const connId=()=>myFam()||(isAdmin?me:null);
+const adminConn=()=>!!me&&!myFam()&&isAdmin;
 // a family post belongs to everyone in the family; an admin post belongs to the admin
 const isMyPost=p=>!!me&&(p.asAdmin?p.from===me:(!!myFam()&&p.from===myFam()));
 function peopleOf(f){if(!f)return{};return f.people&&typeof f.people==="object"?f.people:{[f.id]:""}}
@@ -848,14 +852,14 @@ function onReq(){syncPrivateSubs();refresh();
   if(md==="members")showMembers(true,sheet.dataset.fid)}
 function syncFamSubs(){
   if(!me||memDoc===undefined||!famLoaded)return;
-  const k=myFam()||"";if(k===famSubKey)return;famSubKey=k;
+  const fam=myFam()||"",cid=connId()||"",k=fam+"|"+cid;if(k===famSubKey)return;famSubKey=k;
   famUnsubs.forEach(u=>u());famUnsubs=[];inReq=new Map();outReq=new Map();joinReqs=new Map();
   for(const u of goingSubs.values())u();goingSubs.clear();goingMine.clear();
-  if(k){
-    famUnsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",k)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;onReq();gotIn()},()=>gotIn()));
-    famUnsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",k)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;onReq()},()=>{}));
-    famUnsubs.push(onSnapshot(query(collection(db,"joins"),where("fam","==",k)),snap=>{const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));joinReqs=m;onReq()},()=>{}));
+  if(cid){
+    famUnsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",cid)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;onReq();gotIn()},()=>gotIn()));
+    famUnsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",cid)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;onReq()},()=>{}));
   }else gotIn();
+  if(fam)famUnsubs.push(onSnapshot(query(collection(db,"joins"),where("fam","==",fam)),snap=>{const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));joinReqs=m;onReq()},()=>{}));
   syncPrivateSubs();syncGoingSubs();
 }
 
@@ -971,8 +975,10 @@ function legendList(short){return h("ul",{class:"keylist"},
 
 // ---------- connections ----------
 async function sendRequest(to,note){
-  const mf=myFam(),mine=families.get(mf);if(!mf)throw new Error("no family");
-  await setDoc(doc(db,"requests",mf+"_"+to),{from:mf,to,note:note.slice(0,200),fromName:(mine&&mine.name||"A family").slice(0,40),status:"pending",createdAt:now()});
+  const cid=connId(),mine=families.get(cid);if(!cid)throw new Error("no family");
+  const r={from:cid,to,note:note.slice(0,200),fromName:(mine?mine.name:ADMIN_NAME).slice(0,40),status:"pending",createdAt:now()};
+  if(!mine)r.asAdmin=true;
+  await setDoc(doc(db,"requests",cid+"_"+to),r);
 }
 async function answerRequest(from,accept){
   const r=inReq.get(from);if(!r)return;
@@ -988,7 +994,7 @@ function reqCard(r){
   const err=h("div",{class:"err",role:"alert"});
   const nm=nameOf(r.from,r.fromName);
   return h("div",{class:"req"},
-    h("div",{class:"top"},avatar(nm,"sm"),h("div",null,h("b",null,nm),h("div",{style:"font-size:13px;color:var(--muted)"},"wants to connect with you"),r.note?h("div",{class:"quote",style:"margin-top:6px"},`"${r.note}"`):null)),
+    h("div",{class:"top"},r.asAdmin?h("span",{class:"avatar sm adminav","aria-hidden":"true"},icon("lock",15)):avatar(nm,"sm"),h("div",null,h("b",null,nm),r.asAdmin?h("span",{class:"chip-s you",style:"margin-left:6px;font-size:11px;padding:1px 7px;vertical-align:2px"},"Admin"):null,h("div",{style:"font-size:13px;color:var(--muted)"},"wants to connect with you"),r.note?h("div",{class:"quote",style:"margin-top:6px"},`"${r.note}"`):null)),
     h("div",{class:"actions"},
       h("button",{class:"primary",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{await answerRequest(r.from,true);toast("You're now connected",true)}catch(x){b.disabled=false;err.textContent="Couldn't accept. Try again."}}},icon("check",17),"Accept"),
       h("button",{type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{await answerRequest(r.from,false);toast("Request declined")}catch(x){b.disabled=false;err.textContent="Couldn't decline. Try again."}}},"Decline"),
@@ -996,14 +1002,14 @@ function reqCard(r){
 }
 function connectBox(f){
   const id=f.id,st=connStatus(id),name=f.name||"This family";
-  if(st==="connected")return h("div",{class:"card"},h("h3",null,"You're connected"),h("p",{style:"margin:0"},"You can both see each other's full address and contact."));
+  if(st==="connected")return h("div",{class:"card"},h("h3",null,"You're connected"),h("p",{style:"margin:0"},adminConn()?`${name} knows you'd like to get in touch.`:"You can both see each other's full address and contact."));
   if(st==="incoming")return h("div",{class:"card hl",style:"margin-top:0;margin-bottom:14px"},reqCard(inReq.get(id)));
-  if(st==="sent")return h("div",{class:"card"},h("h3",null,"Request sent"),h("p",{style:"margin:0"},`Waiting for ${name} to reply. When they accept, their full address and contact appear here.`));
+  if(st==="sent")return h("div",{class:"card"},h("h3",null,"Request sent"),h("p",{style:"margin:0"},adminConn()?`Waiting for ${name} to reply.`:`Waiting for ${name} to reply. When they accept, their full address and contact appear here.`));
   const box=h("div",{class:"card",id:"connect-box"});
   box.append(h("h3",null,`Connect with ${name}`),
-    h("p",null,hasHidden(f)?`${name} shares their exact address and contact only with connected families. When they accept, you both see each other's details.`:`Let ${name} know you'd like to get in touch. When they accept, you both see each other's details.`));
-  if(!myFam()){box.append(h("button",{class:"primary",type:"button",onclick:addFamily},icon("plus",18),"Add your family first"),h("p",{style:"margin:8px 0 0;font-size:13px"},"So they know who is asking."));return box}
-  const ta=h("textarea",{id:"c-note",maxlength:200,rows:2,placeholder:"e.g. Hi! We just moved to Lützel and have a 4-year-old too."});
+    adminConn()?h("p",null,`As an admin you can already see their details. A request lets ${name} know you'd like to get in touch. It comes from the ${ADMIN_NAME}, so add your name in the note.`):h("p",null,hasHidden(f)?`${name} shares their exact address and contact only with connected families. When they accept, you both see each other's details.`:`Let ${name} know you'd like to get in touch. When they accept, you both see each other's details.`));
+  if(!connId()){box.append(h("button",{class:"primary",type:"button",onclick:addFamily},icon("plus",18),"Add your family first"),h("p",{style:"margin:8px 0 0;font-size:13px"},"So they know who is asking."));return box}
+  const ta=h("textarea",{id:"c-note",maxlength:200,rows:2,placeholder:adminConn()?"e.g. Hi, I'm Mohan. I look after this map.":"e.g. Hi! We just moved to Lützel and have a 4-year-old too."});
   const err=h("div",{class:"err",role:"alert"});
   box.append(h("label",{for:"c-note"},h("span",null,"Add a short note ",h("span",{class:"opt"},"(optional)")),ta),err,
     h("div",{class:"actions",style:"margin-top:8px"},h("button",{class:"primary",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;err.textContent="";try{await sendRequest(id,ta.value.trim());toast("Request sent",true)}catch(x){b.disabled=false;err.textContent="Couldn't send the request. Try again."}}},icon("send",17),"Send request")));
@@ -1026,7 +1032,7 @@ function openFamily(id,refreshOnly){
   if(chips.children.length)sheet.append(chips);
   const qa=h("div",{class:"qa"});
   if(mine)qa.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(id)},icon("edit",17),"Edit"),h("button",{type:"button",onclick:()=>showComposer()},icon("chat",17),"New post"));
-  else if(st==="none"&&myFam())qa.append(h("button",{class:"primary",type:"button",onclick:()=>{const b=$("connect-box");if(b){b.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{const t=$("c-note");if(t)t.focus({preventScroll:true})},450)}}},icon("people",17),"Connect"));
+  else if(st==="none"&&connId())qa.append(h("button",{class:"primary",type:"button",onclick:()=>{const b=$("connect-box");if(b){b.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{const t=$("c-note");if(t)t.focus({preventScroll:true})},450)}}},icon("people",17),"Connect"));
   if(qa.children.length)sheet.append(qa);
   if(st==="incoming")sheet.append(connectBox(f));
   const fps=famPosts(id);
@@ -1288,7 +1294,7 @@ function showConnections(refreshOnly){
   const list=h("div",{class:"list"});
   for(const id of conns){
     const rm=h("button",{class:"small danger",type:"button",onclick:async e=>{e.stopPropagation();rm.disabled=true;try{await removeConnection(id);toast("Connection removed")}catch(x){rm.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove");
-    const nm=nameOf(id);
+    const nm=nameOf(id,(inReq.get(id)||{}).fromName);
     list.append(h("div",{class:"req",style:"flex-direction:row;align-items:center"},avatar(nm,"sm"),h("div",{style:"flex:1;min-width:0"},h("b",null,nm),h("div",{style:"font-size:13px;color:var(--muted);overflow-wrap:anywhere"},(privates.get(id)||{}).address||"")),
       families.has(id)?h("button",{class:"small",type:"button",onclick:()=>{focusFamily(families.get(id));openFamily(id)}},"Open"):null,rm));
   }
@@ -1317,6 +1323,7 @@ function showMenu(){
     mine?row("plus","New post","Share news or plan an event",()=>showComposer()):null,
     row("people","My connections",`${conns} connected`,()=>showConnections(),pend?h("span",{class:"n"},`${pend} new`):null),
     row("bulb","Suggest an idea","Ideas or problems, straight to the admin",()=>showSuggest()),
+    isOwnerMe()?row("chart","Overview","Families, people and activity",()=>showOverview()):null,
     isOwnerMe()?row("lock","Admins","Give or remove admin access",()=>showAdmins()):null,
     isAdmin?row("inbox","Suggestions inbox","Only you can see this",()=>showInbox(),newSuggCount()?h("span",{class:"n"},`${newSuggCount()} new`):null):null,
     row("info","How it works & privacy","Flags, connections, who sees what",showAbout),
@@ -1373,6 +1380,41 @@ function showInbox(refreshOnly){
         h("div",{style:"white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px"},x.text),acts));
     }
   }
+}
+
+// ---------- overview (owner only) ----------
+function showOverview(){
+  if(!isOwnerMe())return;
+  openSheet("overview");
+  sheet.append(head("Overview","Only you can see this"));
+  const fams=[...families.values()],count=f=>Object.keys(peopleOf(f)).length;
+  const people=fams.reduce((n,f)=>n+count(f),0),shared=fams.filter(f=>count(f)>1).length;
+  const told=fams.filter(f=>f.members),household=told.reduce((n,f)=>n+(+f.members||0),0),kids=fams.reduce((n,f)=>n+(+f.kids||0),0);
+  const act=activePosts(),events=act.filter(p=>p.isEvent).length,msgs=act.length-events;
+  const tile=(n,label,id)=>h("div",{class:"stat"},h("b",id?{id}:null,String(n)),h("span",id?{id:id+"-l"}:null,label));
+  sheet.append(h("div",{class:"stats"},
+    tile(fams.length,fams.length===1?"family on the map":"families on the map"),
+    tile(people,people===1?"person using the map":"people using the map"),
+    tile(household,"family members, as families told us"),
+    tile(kids,kids===1?"kid":"kids"),
+    tile("…","connections made","ov-conn"),
+    tile("…","connection requests waiting","ov-pend"),
+    tile(events,events===1?"upcoming event":"upcoming events"),
+    tile(msgs,msgs===1?"message up now":"messages up now")));
+  sheet.append(h("p",{style:"margin:-4px 0 6px;font-size:12.5px;color:var(--muted)"},
+    `"People using the map" counts accounts in a family. ${shared} famil${shared===1?"y shares":"ies share"} a flag. "Family members" adds up the family size that ${told.length} of ${fams.length} families entered on their flag.`));
+  getDocs(collection(db,"requests")).then(snap=>{let a=0,p=0;snap.forEach(d=>{const st=d.data().status;if(st==="accepted")a++;else if(st==="pending")p++});
+    const set=(id,n,one,many)=>{const x=$(id),l=$(id+"-l");if(x)x.textContent=String(n);if(l)l.textContent=n===1?one:many};
+    set("ov-conn",a,"connection made","connections made");set("ov-pend",p,"connection request waiting","connection requests waiting")}).catch(()=>{const x=$("ov-conn"),y=$("ov-pend");if(x)x.textContent="–";if(y)y.textContent="–"});
+  sheet.append(h("div",{class:"section-title"},`Families (${fams.length})`));
+  const list=h("div",{class:"list"});
+  for(const f of fams.sort((a,b)=>String(a.name).localeCompare(String(b.name)))){
+    const n=count(f),names=memberLine(f);
+    list.append(h("button",{class:"person",type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},avatar(f.name,"sm"),
+      h("span",{class:"tx"},h("b",null,f.name||"Family"),h("span",null,[`${n} ${n===1?"person":"people"}${names&&n>1?": "+names:""}`,f.members?`${f.members} in the family`:null,f.kids?`${f.kids} kid${f.kids>1?"s":""}`:null].filter(Boolean).join(" · "))),icon("chev",18)));
+  }
+  if(!fams.length)list.append(h("p",{class:"empty-line"},"No families on the map yet."));
+  sheet.append(list);
 }
 
 // ---------- admins (owner only) ----------
