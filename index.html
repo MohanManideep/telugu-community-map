@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
-<meta name="app-version" content="2026-10-11.5">
+<meta name="app-version" content="2026-10-11.6">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -356,6 +356,63 @@ details.faq li{margin-bottom:5px}
 @keyframes link{to{stroke-dashoffset:0}}
 @keyframes bubIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+/* ---------- community ---------- */
+.fab.comm{left:14px;right:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow)}
+.fab.comm svg{color:var(--accent)}
+.cdot{position:absolute;top:-3px;right:-3px;width:15px;height:15px;border-radius:50%;background:var(--dot);border:2.5px solid var(--surface);animation:bump .5s var(--ease)}
+.maplibregl-ctrl-bottom-right{bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+.placing .fab.comm{display:none}
+.post{border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.post.unseen{border-color:color-mix(in srgb,var(--dot) 45%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--dot) 8%,transparent)}
+.post .by{display:flex;align-items:center;gap:10px}
+.post .by .t{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;display:block}
+.post .by b{font-family:var(--display);font-size:14.5px;display:block}
+.post .by small{color:var(--muted);font-size:12px}
+.post .txt{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;margin:0}
+.newchip{flex:none;font-size:11px;font-weight:700;color:#fff;background:var(--dot);border-radius:999px;padding:2px 8px}
+.ev-row{display:flex;gap:12px;align-items:flex-start}
+.ev-row>div{min-width:0;flex:1}
+.ev-row>.datebox{flex:none;width:56px}
+.datebox{flex:none;width:56px;border-radius:12px;overflow:hidden;text-align:center;border:1.5px solid var(--accent);background:var(--surface)}
+.datebox .m{display:block;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 0;text-transform:uppercase}
+.datebox .d{display:block;font-family:var(--display);font-size:23px;font-weight:700;line-height:1.1;padding-top:3px}
+.datebox .w{display:block;font-size:11px;color:var(--muted);padding-bottom:4px}
+.ev-meta{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);margin-top:6px}
+.ev-meta span{display:flex;gap:6px;align-items:center;overflow-wrap:anywhere}
+.ev-meta svg{flex:none}
+.going{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.going .cnt{font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.goingbtn.on{background:var(--ok-soft);color:var(--ok);border-color:transparent;font-weight:700}
+.goers{list-style:none;margin:0;padding:10px 12px;background:var(--surface-2);border-radius:10px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.goers li{display:flex;align-items:center;gap:8px}
+.post .acts{display:flex;gap:6px;flex-wrap:wrap}
+.switch{flex-direction:row;align-items:center;gap:12px;cursor:pointer;color:var(--ink);padding:11px 12px;border:1.5px solid var(--line);border-radius:13px;position:relative;transition:border-color .15s,background-color .15s}
+.switch:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.switch input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.switch .sw{flex:none;width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:background-color .2s}
+.switch .sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .25s var(--ease)}
+.switch input:checked+.sw{background:var(--accent)}
+.switch input:checked+.sw::after{transform:translateX(18px)}
+.switch input:focus-visible+.sw{outline:2px solid var(--focus);outline-offset:2px}
+.switch .tx{display:flex;flex-direction:column;font-size:14.5px;font-weight:700}
+.switch .tx small{font-weight:400;color:var(--muted);font-size:12.5px}
+.evbox{display:flex;flex-direction:column;gap:12px;animation:fadeUp .3s var(--ease)}
+.ev-icon{cursor:pointer}
+.ev-icon.sel{z-index:6}
+.evm{display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,.25));transform-origin:bottom center;transition:transform .25s var(--ease)}
+.evm .cal{width:40px;border-radius:9px;overflow:hidden;background:var(--surface);border:2px solid var(--accent);text-align:center}
+.evm .m{display:block;background:var(--accent);color:var(--accent-ink);font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.55}
+.evm .d{display:block;font-family:var(--display);font-weight:700;font-size:16px;line-height:1.3;color:var(--ink)}
+.evm .tip{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid var(--accent);margin-top:-1px}
+.ev-icon.sel .evm{transform:scale(1.2)}
+@media (hover:hover){.ev-icon:hover .evm{transform:translateY(-3px)}}
+.ev-icon.new .evm{animation:wdrop .6s var(--ease) both}
+.k-ev::before{content:"";position:absolute;left:3px;top:2px;width:18px;height:18px;border:2px solid var(--accent);border-top-width:6px;border-radius:5px;background:var(--surface);box-sizing:border-box}
+.notif{display:flex;align-items:center;gap:12px;width:100%;text-align:left;justify-content:flex-start;padding:11px 12px;border-radius:12px;margin-bottom:8px}
+.notif .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.notif .tx span{font-size:14.5px}
+.notif .tx small{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notif.isnew{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:var(--accent-soft)}
 /* ---------- update banner ---------- */
 .updbar{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));translate:-50% 0;z-index:1900;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--surface);padding:8px 8px 8px 16px;border-radius:999px;box-shadow:var(--shadow);font-size:14px;white-space:nowrap;animation:toastIn .35s var(--ease)}
 .updbar button{padding:7px 14px;border-radius:999px}
@@ -466,6 +523,7 @@ window.FIREBASE_CONFIG = {
     <div id="loading" class="loading" hidden><span class="spin" aria-hidden="true"></span>Loading families…</div>
     <div id="mapErr" class="maperr" hidden><p>The map couldn't load. Check your internet connection.</p><button class="primary" type="button" onclick="location.reload()">Try again</button></div>
     <button id="fab" class="fab" type="button" hidden></button>
+    <button id="commBtn" class="fab comm" type="button" hidden aria-label="Community: messages and events"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Community</span><span id="commDot" class="cdot" hidden></span></button>
     <div id="empty" class="empty" hidden></div>
     <div id="placebar" class="placebar" hidden>
       <p><b>Find your home.</b> Search your address, or zoom in and tap your house. Drag the flag to fine-tune.</p>
@@ -484,7 +542,7 @@ window.FIREBASE_CONFIG = {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, query, where, writeBatch, terminate, clearIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, writeBatch, increment, terminate, clearIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- constants ----------
 const KOBLENZ=[50.356,7.594];
@@ -510,6 +568,7 @@ const ICONS={
   pin:'<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',check:'<path d="m5 12 5 5 9-10"/>',
   send:'<path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>',
   bulb:'<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>',
+  cal:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   inbox:'<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>'
 };
 function icon(n,size=20){const s=document.createElementNS("http://www.w3.org/2000/svg","svg");for(const [k,v] of Object.entries({viewBox:"0 0 24 24",width:size,height:size,fill:"none",stroke:"currentColor","stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round","aria-hidden":"true"}))s.setAttribute(k,v);s.innerHTML=ICONS[n]||"";return s}
@@ -536,11 +595,11 @@ function openSheet(mode){
   sheet.classList.remove("closing","noanim");sheet.classList.toggle("swap",wasOpen);sheet.classList.toggle("formmode",mode==="form");
   sheet.style.transform="";sheet.hidden=false;sheet.textContent="";sheet.scrollTop=0;sheet.dataset.mode=mode||"";
   sheet.append(h("div",{class:"grab","aria-hidden":"true"}));
-  openId=null;setSel(null);if(mode!=="search"){searchHits=null;applyDim()}
+  openId=null;setSel(null);openPostId=null;setEvSel(null);if(mode!=="search"){searchHits=null;applyDim()}
 }
 function rerenderSheet(mode){sheet.classList.add("noanim");sheet.textContent="";sheet.dataset.mode=mode;sheet.append(h("div",{class:"grab","aria-hidden":"true"}))}
 function closeSheet(){
-  if(sheet.hidden)return;openId=null;setSel(null);sheet.dataset.mode="";searchHits=null;applyDim();
+  if(sheet.hidden)return;openId=null;setSel(null);openPostId=null;setEvSel(null);sheet.dataset.mode="";searchHits=null;applyDim();
   sheet.classList.add("closing");clearTimeout(closeTimer);
   closeTimer=setTimeout(()=>{sheet.hidden=true;sheet.textContent="";sheet.classList.remove("closing","swap","formmode","noanim")},210);
 }
@@ -554,7 +613,7 @@ function head(title,sub,avName){
  sheet.addEventListener("pointerdown",e=>{if(innerWidth>=820||!e.target.closest(".grab,.sheet-head")||e.target.closest("button,a,input,textarea,select"))return;drag={y:e.clientY,dy:0};sheet.setPointerCapture(e.pointerId);sheet.style.transition="none"});
  sheet.addEventListener("pointermove",e=>{if(!drag)return;drag.dy=Math.max(0,e.clientY-drag.y);sheet.style.transform=`translateY(${drag.dy}px)`});
  const end=()=>{if(!drag)return;const d=drag.dy;drag=null;sheet.style.transition="transform .22s ease";
-   if(d>90){sheet.style.transform="translateY(100%)";setTimeout(()=>{sheet.style.transition="";sheet.style.transform="";sheet.hidden=true;sheet.textContent="";sheet.classList.remove("swap","formmode","noanim");openId=null;setSel(null);sheet.dataset.mode="";searchHits=null;applyDim()},220)}
+   if(d>90){sheet.style.transform="translateY(100%)";setTimeout(()=>{sheet.style.transition="";sheet.style.transform="";sheet.hidden=true;sheet.textContent="";sheet.classList.remove("swap","formmode","noanim");openId=null;setSel(null);openPostId=null;setEvSel(null);sheet.dataset.mode="";searchHits=null;applyDim()},220)}
    else{sheet.style.transform="";setTimeout(()=>sheet.style.transition="",230)}};
  sheet.addEventListener("pointerup",end);sheet.addEventListener("pointercancel",end);}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!sheet.hidden&&!placing)closeSheet()});
@@ -569,7 +628,7 @@ function showHouseNumbers(show){if(!map)return;for(const id of houseNumberLayers
 function initMap(){
   map=new maplibregl.Map({container:"map",style:MAP_STYLE,center:[KOBLENZ[1],KOBLENZ[0]],zoom:13,maxZoom:19,attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false});
   map.touchZoomRotate.disableRotation();
-  map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-left");
+  map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");
   map.addControl(new maplibregl.AttributionControl({compact:true}),"top-right");
   const foldCredits=()=>{const a=document.querySelector(".maplibregl-ctrl-attrib");if(a)a.classList.remove("maplibregl-compact-show")};map.once("idle",foldCredits);setTimeout(foldCredits,1500);
   map.on("load",()=>{houseNumberLayers=(map.getStyle().layers||[]).filter(l=>l["source-layer"]==="housenumber").map(l=>l.id);showHouseNumbers(!!placing)});
@@ -592,7 +651,7 @@ function onMapClick(e){
   if(placing){setTemp(e.lngLat.lat,e.lngLat.lng,null);return}
   if(now()-lastFlagClick<350||(e.originalEvent&&e.originalEvent.target&&e.originalEvent.target.closest&&e.originalEvent.target.closest(".flag-icon")))return;
   $("keyPop").hidden=true;$("keyBtn").setAttribute("aria-expanded","false");
-  if(!sheet.hidden&&!["form","post","delete"].includes(sheet.dataset.mode))closeSheet();
+  if(!sheet.hidden&&!["form","compose","suggest","delete"].includes(sheet.dataset.mode))closeSheet();
 }
 
 // ---------- keep the app up to date ----------
@@ -606,7 +665,7 @@ async function checkForUpdate(initial){
     const m=(await r.text()).match(/<meta name="app-version" content="([^"]+)"/);
     if(!m||!APP_VERSION||m[1]===APP_VERSION)return;
     let tried=null;try{tried=sessionStorage.getItem("autoUpdated")}catch(e){}
-    const busy=!!placing||(!sheet.hidden&&["form","post","suggest","delete"].includes(sheet.dataset.mode));
+    const busy=!!placing||(!sheet.hidden&&["form","compose","suggest","delete"].includes(sheet.dataset.mode));
     if(initial&&tried!==m[1]&&!busy){try{sessionStorage.setItem("autoUpdated",m[1])}catch(e){}location.reload();return}
     $("updbar").hidden=false;
   }catch(e){}
@@ -625,10 +684,14 @@ const app=initializeApp(cfg), auth=getAuth(app);
 let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){db=getFirestore(app)}
 
 // ---------- state ----------
-let me=null, isAdmin=false, families=new Map(), privates=new Map(), seen={}, openId=null, placing=null, famLoaded=false, lastCount=0;
+let me=null, isAdmin=false, families=new Map(), privates=new Map(), openId=null, placing=null, famLoaded=false, lastCount=0;
 let outReq=new Map(), inReq=new Map();   // keyed by the other person's id
 const markers=new Map(), privSubs=new Map(); let unsubs=[]; let migrated=false;
 let mySugg=[], allSugg=[], justAdded=null;   // suggestions: my own, and (admin only) everyone's
+// Community posts (messages and events). seenDoc remembers what this member has already looked at.
+let posts=new Map(), goingMine=new Map(), postsLoaded=false, cleaned=false, commNew=new Set();
+const goingSubs=new Map(), evMarkers=new Map();
+let seenDoc={posts:{},notifSeenAt:0,goingSeen:{}};
 
 function connStatus(id){
   const o=outReq.get(id),i=inReq.get(id);
@@ -690,7 +753,8 @@ function authError(code){return({
 
 onAuthStateChanged(auth,async user=>{
   unsubs.forEach(u=>u());unsubs=[];for(const u of privSubs.values())u();privSubs.clear();privates.clear();
-  families.clear();outReq.clear();inReq.clear();famLoaded=false;mySugg=[];allSugg=[];redrawFlags();if(!sheet.hidden)closeSheet();
+  families.clear();outReq.clear();inReq.clear();famLoaded=false;mySugg=[];allSugg=[];
+  for(const u of goingSubs.values())u();goingSubs.clear();goingMine.clear();posts.clear();postsLoaded=false;cleaned=false;seenDoc={posts:{},notifSeenAt:0,goingSeen:{}};redrawFlags();if(!sheet.hidden)closeSheet();
   $("welcome").hidden=true;document.body.classList.toggle("loggedout",!user);
   if(!user){me=null;isAdmin=false;refresh();$("mapkey").hidden=true;$("loading").hidden=true;await introDone;if(!auth.currentUser)showAuth();return}
   me=user.uid;$("auth").hidden=true;$("loading").hidden=false;if(map)$("mapkey").hidden=false;refresh();
@@ -699,16 +763,22 @@ onAuthStateChanged(auth,async user=>{
   unsubs.push(onSnapshot(collection(db,"families"),snap=>{
     const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));families=m;famLoaded=true;$("loading").hidden=true;refresh();gotFam();
     if(openId&&!families.has(openId))closeSheet();
-    if(sheet.dataset.mode==="activity")showActivity(true);
+    if(sheet.dataset.mode==="notif")showNotifications(true);
+    if(sheet.dataset.mode==="community")showCommunity(true);
     if(isAdmin&&!migrated){migrated=true;migrateOldFlags()}
   },()=>{gotFam();$("loading").hidden=true;toast("Couldn't load the families. Reload to try again.")}));
-  unsubs.push(onSnapshot(doc(db,"seen",me),s=>{seen=s.exists()&&s.data().seen?{...s.data().seen}:{};refresh();gotSeen()},()=>gotSeen()));
+  unsubs.push(onSnapshot(doc(db,"seen",me),s=>{const d=s.exists()?s.data():{};seenDoc={posts:{...(d.posts||{})},notifSeenAt:d.notifSeenAt||0,goingSeen:{...(d.goingSeen||{})}};refresh();gotSeen()},()=>gotSeen()));
+  unsubs.push(onSnapshot(collection(db,"posts"),snap=>{
+    const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));posts=m;postsLoaded=true;syncGoingSubs();refresh();
+    const md=sheet.dataset.mode;if(md==="community")showCommunity(true);else if(md==="notif")showNotifications(true);else if(md==="postview"&&openPostId)openPost(openPostId,true);else if(md==="family"&&openId)openFamily(openId,true);
+    if(!cleaned){cleaned=true;cleanupExpired()}
+  },()=>{}));
   const sortS=a=>a.sort((x,y)=>y.createdAt-x.createdAt);
   unsubs.push(onSnapshot(query(collection(db,"suggestions"),where("from","==",me)),snap=>{mySugg=sortS(snap.docs.map(d=>({id:d.id,...d.data()})));if(sheet.dataset.mode==="suggest")showSuggest(true)},()=>{}));
-  if(isAdmin)unsubs.push(onSnapshot(collection(db,"suggestions"),snap=>{allSugg=sortS(snap.docs.map(d=>({id:d.id,...d.data()})));refresh();if(sheet.dataset.mode==="inbox")showInbox(true);if(sheet.dataset.mode==="activity")showActivity(true)},()=>{}));
+  if(isAdmin)unsubs.push(onSnapshot(collection(db,"suggestions"),snap=>{allSugg=sortS(snap.docs.map(d=>({id:d.id,...d.data()})));refresh();if(sheet.dataset.mode==="inbox")showInbox(true);if(sheet.dataset.mode==="notif")showNotifications(true)},()=>{}));
   const onReq=()=>{syncPrivateSubs();refresh();
     if(openId&&sheet.dataset.mode==="family")openFamily(openId,true);
-    if(sheet.dataset.mode==="activity")showActivity(true);
+    if(sheet.dataset.mode==="notif")showNotifications(true);
     if(sheet.dataset.mode==="conn")showConnections(true)};
   unsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",me)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;onReq();gotIn()},()=>gotIn()));
   unsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",me)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;onReq()},()=>{}));
@@ -736,9 +806,8 @@ async function migrateOldFlags(){
 
 // ---------- flags ----------
 function flagHTML(f,{temp=false}={}){
-  const m=activeMsg(f);let dot="";
-  if(m&&!temp&&f.id!==me)dot=`<span class="dot ${seen[f.id]===m.postedAt?"read":"unread"}"></span>`;
-  if(m&&!temp&&f.id===me)dot=`<span class="dot read"></span>`;
+  let dot="";
+  if(!temp&&f.id){const ps=famPosts(f.id);if(ps.length)dot=`<span class="dot ${f.id!==me&&ps.some(isUnseen)?"unread":"read"}"></span>`}
   const approx=!temp&&!exactPos(f)?" approx":"";
   return `<div class="flag${f.id===me?" mine":""}${temp?" temp":""}${approx}"><span class="pole"></span><span class="pen"></span><span class="base"></span>${dot}<span class="nm">${esc(f.name||"Your flag")}</span></div>`;
 }
@@ -779,15 +848,20 @@ function scaleFlags(){
   }
 }
 
-function unreadCount(){return[...families.values()].filter(f=>{const m=activeMsg(f);return m&&f.id!==me&&seen[f.id]!==m.postedAt}).length}
+function unseenPostsCount(){return activePosts().filter(isUnseen).length}
+function newAccepted(){return[...outReq.values()].filter(r=>r.status==="accepted"&&(r.respondedAt||0)>seenDoc.notifSeenAt&&now()-r.respondedAt<30*86400000)}
+function myEventsWithNews(){return activePosts().filter(p=>p.isEvent&&p.from===me&&!p.legacy&&(p.going||0)>(seenDoc.goingSeen[p.id]||0))}
+function notifCount(){return pendingCount()+newAccepted().length+myEventsWithNews().length+newSuggCount()}
 function newSuggCount(){return isAdmin?allSugg.filter(x=>x.status==="new").length:0}
 function pendingCount(){return[...inReq.values()].filter(r=>r.status==="pending").length}
 function refresh(){
   redrawFlags();
-  const n=me?unreadCount()+pendingCount()+newSuggCount():0;
+  const n=me?notifCount():0;
   const bell=$("bellBtn"),c=$("bellCount");bell.hidden=!me;c.hidden=!n;c.textContent=n>9?"9+":String(n);
   if(n>lastCount){c.classList.remove("bump");void c.offsetWidth;c.classList.add("bump")}lastCount=n;
-  bell.setAttribute("aria-label",n?`Activity, ${n} new`:"Activity");
+  bell.setAttribute("aria-label",n?`Notifications, ${n} new`:"Notifications");
+  const cb=$("commBtn");cb.hidden=!me||!famLoaded;$("commDot").hidden=!me||!unseenPostsCount();
+  redrawEvents();
   const mb=$("menuBtn");mb.hidden=!me;
   if(me){const mine=families.get(me);const nm=mine&&mine.name||(auth.currentUser&&auth.currentUser.email)||"?";if(mb.dataset.nm!==nm){mb.dataset.nm=nm;mb.replaceChildren(avatar(nm))}}
   $("infoBtn").hidden=!!me;$("searchWrap").hidden=!me;
@@ -800,22 +874,19 @@ function refresh(){
 setInterval(()=>{if(families.size)refresh()},60000);
 function focusFamily(f){const p=famPos(f);if(!p)return;const run=()=>goTo(p[0],p[1],Math.max(map.getZoom(),16));requestAnimationFrame(()=>{if(map)run();else mapReady.then(m=>{if(m)run()})})}
 $("fab").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
-$("bellBtn").onclick=()=>showActivity();
+$("bellBtn").onclick=()=>showNotifications();
+$("commBtn").onclick=()=>showCommunity();
 $("menuBtn").onclick=showMenu;
 $("infoBtn").onclick=showAbout;
 $("keyBtn").onclick=()=>{const p=$("keyPop");p.hidden=!p.hidden;$("keyBtn").setAttribute("aria-expanded",String(!p.hidden));if(!p.hidden&&!p.firstChild)p.append(legendList(true))};
 
-async function markSeen(f){
-  const m=activeMsg(f);if(!m||!me||f.id===me||seen[f.id]===m.postedAt)return;
-  seen={...seen,[f.id]:m.postedAt};refresh();
-  const keep={};for(const id in seen){const g=families.get(id);if(g&&activeMsg(g))keep[id]=seen[id]}
-  try{await setDoc(doc(db,"seen",me),{seen:keep})}catch(e){}
-}
+function markSeen(f){markPostsSeen(famPosts(f.id))}
 function legendList(short){return h("ul",{class:"keylist"},
   h("li",null,h("span",{class:"k k-flag"}),short?"A family. Tap a flag to see who they are.":"A family's flag. Tap it to see who they are."),
   h("li",null,h("span",{class:"k k-mine"}),"Blue flag: your own family."),
-  h("li",null,h("span",{class:"k k-dot"}),"Red dot: a new message from this family."),
-  h("li",null,h("span",{class:"k k-ring"}),"Ring: a message you've already read."),
+  h("li",null,h("span",{class:"k k-dot"}),"Red dot: a new post from this family."),
+  h("li",null,h("span",{class:"k k-ring"}),"Ring: a post you've already seen."),
+  h("li",null,h("span",{class:"k k-ev"}),"Calendar: an event. Tap it for details."),
   h("li",null,h("span",{class:"k k-approx"}),"Lighter flag: shown near the home, not on the exact house."))}
 
 // ---------- connections ----------
@@ -873,13 +944,13 @@ function openFamily(id,refreshOnly){
   if(!mine&&!exactPos(f))chips.append(h("span",{class:"chip-s"},icon("pin",13),"Flag shown near the home"));
   if(chips.children.length)sheet.append(chips);
   const qa=h("div",{class:"qa"});
-  if(mine)qa.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("edit",17),"Edit"),h("button",{type:"button",onclick:showPostMessage},icon("chat",17),activeMsg(f)?"Change message":"Post a message"));
+  if(mine)qa.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("edit",17),"Edit"),h("button",{type:"button",onclick:()=>showComposer()},icon("chat",17),"New post"));
   else if(st==="none"&&families.has(me))qa.append(h("button",{class:"primary",type:"button",onclick:()=>{const b=$("connect-box");if(b){b.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{const t=$("c-note");if(t)t.focus({preventScroll:true})},450)}}},icon("people",17),"Connect"));
   if(qa.children.length)sheet.append(qa);
   if(st==="incoming")sheet.append(connectBox(f));
-  if(mine&&justAdded===me&&!activeMsg(f))sheet.append(h("div",{class:"card hl",style:"margin:0 0 14px"},h("h3",null,"Say hello to the community?"),h("p",null,"Post a short message so others know you've joined. Everyone sees a red dot on your flag."),h("div",{class:"inline"},h("button",{class:"primary",type:"button",onclick:()=>{justAdded=null;showPostMessage()}},icon("chat",17),"Post a message"),h("button",{class:"ghost",type:"button",onclick:()=>{justAdded=null;openFamily(me,true)}},"Not now"))));
-  const m=activeMsg(f);
-  if(m)sheet.append(h("div",{class:"msg"},h("div",{class:"lbl"},icon("chat",14),mine?"Your message":"Message to the community"),h("p",null,m.text),h("div",{class:"when"},`Posted ${fmtDate(m.postedAt)} · ${fmtLeft(m.expiresAt-now())}`)));
+  const fps=famPosts(id);
+  if(mine&&justAdded===me&&!fps.length)sheet.append(h("div",{class:"card hl",style:"margin:0 0 14px"},h("h3",null,"Say hello to the community?"),h("p",null,"Post a short message so others know you've joined. Everyone sees a red dot on your flag."),h("div",{class:"inline"},h("button",{class:"primary",type:"button",onclick:()=>{justAdded=null;showComposer()}},icon("chat",17),"Post a message"),h("button",{class:"ghost",type:"button",onclick:()=>{justAdded=null;openFamily(me,true)}},"Not now"))));
+  for(const p of fps.sort((a,b)=>(a.isEvent?a.when:a.createdAt)-(b.isEvent?b.when:b.createdAt)))sheet.append(postCard(p,{hideBy:true}));
   const dl=h("dl"),add=(k,v)=>{if(v==null||v==="")return;dl.append(h("dt",null,k),h("dd",null,v))};
   if(addr&&addr.full)add("Address",copyRow(addr.text));
   add("What we do",f.profession);add("Interests",f.interests);
@@ -914,28 +985,31 @@ function confirmRemove(id){
       h("button",{type:"button",onclick:()=>id===me?openForm(id):openFamily(id)},"Cancel")));
 }
 
-// ---------- activity (bell) ----------
-function showActivity(refreshOnly){
-  if(refreshOnly)rerenderSheet("activity");else openSheet("activity");
-  sheet.append(head("Activity","Requests and community messages"));
+// ---------- notifications (bell): only things that are about you ----------
+function showNotifications(refreshOnly){
+  if(refreshOnly)rerenderSheet("notif");else openSheet("notif");
+  sheet.append(head("Notifications","Just for you"));
   const incoming=[...inReq.values()].filter(r=>r.status==="pending").sort((a,b)=>b.createdAt-a.createdAt);
-  sheet.append(h("div",{class:"section-title"},"Connection requests",incoming.length?h("span",{class:"n"},String(incoming.length)):null));
-  if(!incoming.length)sheet.append(h("p",{class:"empty-line"},"No requests waiting."));
-  for(const r of incoming)sheet.append(reqCard(r));
-  const msgs=[...families.values()].filter(f=>activeMsg(f)).sort((a,b)=>b.message.postedAt-a.message.postedAt);
-  sheet.append(h("div",{class:"section-title"},"Community messages"));
-  const mineF=families.get(me);
-  sheet.append(mineF?h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:10px",onclick:showPostMessage},icon("chat",18),activeMsg(mineF)?"Change my message":"Post a message")
-    :h("p",{class:"note",style:"margin-top:0"},"Add your family to the map to post messages. ",h("button",{class:"link",type:"button",onclick:()=>openForm(me)},"Add my family")));
-  if(!msgs.length)sheet.append(h("p",{class:"empty-line"},"No messages right now."));
-  const list=h("div",{class:"list"});
-  for(const f of msgs){const unread=f.id!==me&&seen[f.id]!==f.message.postedAt;
-    list.append(h("button",{class:"person",type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},avatar(f.name,"sm"),
-      h("span",{class:"tx"},h("b",null,f.id===me?`${f.name} (you)`:f.name||"Family"),h("span",null,f.message.text),h("small",{style:"color:var(--muted);font-size:12px"},`${fmtDate(f.message.postedAt)} · ${fmtLeft(f.message.expiresAt-now())}`)),
-      unread?h("span",{class:"udot","aria-label":"New"}):null))}
-  sheet.append(list);
+  const accepted=[...outReq.values()].filter(r=>r.status==="accepted"&&r.respondedAt&&now()-r.respondedAt<30*86400000).sort((a,b)=>b.respondedAt-a.respondedAt).slice(0,10);
+  const myEv=activePosts().filter(p=>p.isEvent&&p.from===me&&!p.legacy&&(p.going||0)>0).sort((a,b)=>a.when-b.when);
   const ns=newSuggCount();
-  if(isAdmin&&ns)sheet.append(h("div",{class:"section-title"},"Suggestions for you",h("span",{class:"n"},String(ns))),h("button",{type:"button",style:"width:100%",onclick:showInbox},icon("inbox",18),`Open suggestions inbox (${ns} new)`));
+  let any=false;
+  if(incoming.length){any=true;sheet.append(h("div",{class:"section-title"},"Connection requests",h("span",{class:"n"},String(incoming.length))));for(const r of incoming)sheet.append(reqCard(r))}
+  if(myEv.length){any=true;sheet.append(h("div",{class:"section-title"},"Your events"));
+    for(const p of myEv){const was=seenDoc.goingSeen[p.id]||0,more=(p.going||0)-was;
+      sheet.append(h("button",{class:"notif"+(more>0?" isnew":""),type:"button",onclick:()=>openPost(p.id)},h("span",{class:"ic",style:"color:var(--accent)"},icon("cal",22)),
+        h("span",{class:"tx"},h("span",null,h("b",null,`${p.going} famil${p.going>1?"ies are":"y is"} going`),more>0&&was>0?` (${more} new)`:""),h("small",null,`${fmtWhen(p.when)} · ${p.text}`)),icon("chev",18)))}}
+  if(accepted.length){any=true;sheet.append(h("div",{class:"section-title"},"Accepted your request"));
+    for(const r of accepted){const isNew=r.respondedAt>seenDoc.notifSeenAt,nm=nameOf(r.to);
+      sheet.append(h("button",{class:"notif"+(isNew?" isnew":""),type:"button",onclick:()=>{const f=families.get(r.to);if(f){focusFamily(f);openFamily(r.to)}}},avatar(nm,"sm"),
+        h("span",{class:"tx"},h("span",null,h("b",null,nm)," accepted your request"),h("small",null,`${fmtDate(r.respondedAt)} · You can now see their full details`)),icon("chev",18)))}}
+  if(isAdmin&&ns){any=true;sheet.append(h("div",{class:"section-title"},"Suggestions for you",h("span",{class:"n"},String(ns))),h("button",{type:"button",style:"width:100%",onclick:showInbox},icon("inbox",18),`Open suggestions inbox (${ns} new)`))}
+  if(!any)sheet.append(h("div",{class:"empty-line",style:"text-align:center;padding:26px 10px"},h("div",{style:"color:var(--muted);margin-bottom:8px"},icon("check",28)),"You're all caught up.",h("br"),"Connection requests and replies to your events will show up here."));
+  if(!refreshOnly){
+    let changed=false;const gs={};for(const p of activePosts())if(p.isEvent&&p.from===me&&!p.legacy){gs[p.id]=p.going||0;if(gs[p.id]!==(seenDoc.goingSeen[p.id]||0))changed=true}
+    if(newAccepted().length)changed=true;
+    if(changed){seenDoc={...seenDoc,notifSeenAt:now(),goingSeen:gs};saveSeen();refresh()}
+  }
 }
 
 // ---------- connections ----------
@@ -943,7 +1017,7 @@ function showConnections(refreshOnly){
   if(refreshOnly)rerenderSheet("conn");else openSheet("conn");
   sheet.append(head("My connections","Families who can see each other's full details"));
   const pend=pendingCount();
-  if(pend)sheet.append(h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:6px",onclick:()=>showActivity()},`${pend} request${pend>1?"s":""} waiting for you`));
+  if(pend)sheet.append(h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:6px",onclick:()=>showNotifications()},`${pend} request${pend>1?"s":""} waiting for you`));
   const conns=[...connectedIds()];
   sheet.append(h("div",{class:"section-title"},`Connected (${conns.length})`));
   if(!conns.length)sheet.append(h("p",{class:"empty-line"},"No connections yet. Tap a family's flag and send a request."));
@@ -974,7 +1048,8 @@ function showMenu(){
   sheet.append(h("div",{class:"profile"},avatar(mine?mine.name:email,"lg"),h("div",{class:"t"},h("b",null,mine?mine.name:"No flag yet"),h("span",null,email),isAdmin?h("span",{class:"chip-s you",style:"display:inline-flex;margin-top:4px"},"Admin"):null),h("button",{class:"x",type:"button","aria-label":"Close",onclick:closeSheet},icon("close",18))));
   sheet.append(h("div",{class:"rows"},
     row("flag",mine?"My family":"Add my family",mine?"See and edit your flag":"Put your family on the map",()=>{if(mine){focusFamily(mine);openFamily(me)}else openForm(me)}),
-    mine?row("chat",activeMsg(mine)?"Change my message":"Post a message","Shows a red dot on your flag",showPostMessage):null,
+    row("chat","Community","Messages and events from families",()=>showCommunity(),unseenPostsCount()?h("span",{class:"n"},`${unseenPostsCount()} new`):null),
+    mine?row("plus","New post","Share news or plan an event",()=>showComposer()):null,
     row("people","My connections",`${conns} connected`,()=>showConnections(),pend?h("span",{class:"n"},`${pend} new`):null),
     row("bulb","Suggest an idea","Ideas or problems, straight to the admin",()=>showSuggest()),
     isAdmin?row("inbox","Suggestions inbox","Only you can see this",()=>showInbox(),newSuggCount()?h("span",{class:"n"},`${newSuggCount()} new`):null):null,
@@ -1049,10 +1124,12 @@ function showAbout(){
       "Your exact location, full address and contact: you choose for each one, either everyone or only families you've connected with.",
       "The admin can see all details, including hidden ones, to keep the map safe and tidy.")),
     faq("How do connections work?",false,h("p",null,"Open a family's flag and send a request, with a short note if you like. When they accept, you both see each other's full address, contact and directions. You only connect once, and either of you can remove the connection at any time.")),
-    faq("How do messages work?",false,h("p",null,"Tap the bell (top right) and choose Post a message. Share an event or ask a question. Everyone sees a red dot on your flag. It turns into a ring once they've read it, and disappears after the days you choose.")),
+    faq("Community: messages and events",false,h("p",null,"Tap Community (bottom left) to see what's happening. Tap New post to share news or ask a question. Turn on \"Add date & place\" to make it an event, and pin the place on the map if you like."),
+      h("p",null,"Families can tap I'm going. Everyone sees how many are going; only the organiser sees who. Messages disappear after the days you choose, events after the day they happen.")),
+    faq("What does the bell show?",false,h("p",null,"Only things about you: connection requests, families who accepted your request, and families going to your events.")),
     faq("Privacy: what's stored and where",false,ul(
       "Your email address, for logging in. Other members never see it.",
-      "What you enter for your flag, your connections and requests, and which messages you've read.",
+      "What you enter for your flag, your posts and events, which events you're going to, your connections and requests, and which posts you've seen.",
       "Everything is stored with Google Firebase. It's not used for ads and never sold or shared.",
       "The map comes from OpenFreeMap and OpenStreetMap. When you search for an address, the search text is sent to OpenStreetMap's address search (Nominatim).",
       "Questions? Ask the admin in the community WhatsApp group.")),
@@ -1065,7 +1142,7 @@ function showDelete(){
   openSheet("delete");
   sheet.append(head("Delete your account?",null));
   sheet.append(h("p",{class:"lead",style:"margin-bottom:8px"},"This removes everything about you from the map, straight away:"),
-    h("ul",{class:"who-sees",style:"margin-bottom:12px"},...["Your flag, address and contact","Your message","Your connections and requests","Your suggestions","Your login"].map(t=>h("li",null,icon("check",17),t))),
+    h("ul",{class:"who-sees",style:"margin-bottom:12px"},...["Your flag, address and contact","Your posts and events","Your connections and requests","Your suggestions","Your login"].map(t=>h("li",null,icon("check",17),t))),
     h("p",{style:"margin:0 0 12px"},h("b",null,"This can't be undone.")));
   if(isAdmin)sheet.append(h("p",{class:"note"},h("b",null,"You're the admin. "),"Make someone else admin in Firebase first, so the map still has an admin."));
   const pw=h("input",{type:"password",id:"del-pw",autocomplete:"current-password"});
@@ -1079,6 +1156,10 @@ function showDelete(){
 async function deleteAccount(password){
   const u=auth.currentUser;if(!u)return;
   await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,password));
+  const jobs=[];
+  for(const p of posts.values())if(p.from===me)jobs.push(deletePost(p.id));
+  for(const [pid,on] of goingMine)if(on&&posts.has(pid)){const b=writeBatch(db);b.delete(doc(db,"posts",pid,"going",me));b.update(doc(db,"posts",pid),{going:increment(-1)});jobs.push(b.commit())}
+  await Promise.allSettled(jobs);
   const b1=writeBatch(db);b1.delete(doc(db,"families",me));b1.delete(doc(db,"private",me));b1.delete(doc(db,"seen",me));await b1.commit();
   const ids=new Set([...outReq.values(),...inReq.values()].map(r=>r.id));
   mySugg.forEach(x=>ids.add("s:"+x.id));
@@ -1089,26 +1170,175 @@ async function deleteAccount(password){
   location.reload();
 }
 
-// ---------- post a message ----------
+// ---------- community: posts and events ----------
+let openPostId=null;
+function legacyPosts(){const out=[];for(const f of families.values()){const m=activeMsg(f);if(m)out.push({id:"m:"+f.id,legacy:true,from:f.id,fromName:f.name,text:m.text,createdAt:m.postedAt,expiresAt:m.expiresAt,isEvent:false,going:0})}return out}
+function activePosts(){const t=now();return[...[...posts.values()].filter(p=>p.expiresAt>t&&p.text),...legacyPosts()]}
+function famPosts(fid){return activePosts().filter(p=>p.from===fid)}
+const postKey=p=>p.legacy?`${p.id}:${p.createdAt}`:p.id;
+const isUnseen=p=>!!me&&p.from!==me&&!seenDoc.posts[postKey(p)];
+let seenTimer=0;
+function saveSeen(){clearTimeout(seenTimer);seenTimer=setTimeout(async()=>{
+  const keep={};const live=new Set(activePosts().map(postKey));for(const k in seenDoc.posts)if(live.has(k))keep[k]=1;
+  const gs={};for(const k in seenDoc.goingSeen)if(posts.has(k))gs[k]=seenDoc.goingSeen[k];
+  seenDoc={...seenDoc,posts:keep,goingSeen:gs};
+  try{await setDoc(doc(db,"seen",me),seenDoc)}catch(e){}},400)}
+function markPostsSeen(list){let ch=false;for(const p of list)if(isUnseen(p)){seenDoc.posts[postKey(p)]=1;ch=true}if(ch){refresh();saveSeen()}}
+function syncGoingSubs(){
+  const want=new Set(activePosts().filter(p=>p.isEvent&&!p.legacy&&p.from!==me).map(p=>p.id));
+  for(const [id,u] of goingSubs)if(!want.has(id)){u();goingSubs.delete(id);goingMine.delete(id)}
+  for(const id of want)if(!goingSubs.has(id))goingSubs.set(id,onSnapshot(doc(db,"posts",id,"going",me),s=>{goingMine.set(id,s.exists());const md=sheet.dataset.mode;if(md==="community")showCommunity(true);else if(md==="postview"&&openPostId===id)openPost(id,true);else if(md==="family"&&openId)openFamily(openId,true)},()=>{}));
+}
+async function setGoing(p,on){
+  const b=writeBatch(db),nm=((families.get(me)||{}).name||"A family").slice(0,40);
+  if(on){b.set(doc(db,"posts",p.id,"going",me),{name:nm,at:now()});b.update(doc(db,"posts",p.id),{going:increment(1)})}
+  else{b.delete(doc(db,"posts",p.id,"going",me));b.update(doc(db,"posts",p.id),{going:increment(-1)})}
+  await b.commit();
+}
+async function deletePost(pid){
+  const gs=await getDocs(collection(db,"posts",pid,"going"));
+  const b=writeBatch(db);gs.forEach(d=>b.delete(doc(db,"posts",pid,"going",d.id)));b.delete(doc(db,"posts",pid));await b.commit();
+}
+async function cleanupExpired(){const t=now();for(const p of posts.values())if(p.expiresAt<=t&&(p.from===me||isAdmin)){try{await deletePost(p.id)}catch(e){}}}
+function fmtWhen(ts){try{const d=new Date(ts);return d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})+", "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}catch(e){return""}}
+function ago(ts){const m=Math.round((now()-ts)/60000);if(m<1)return"just now";if(m<60)return`${m} min ago`;const hr=Math.round(m/60);if(hr<24)return`${hr} h ago`;const d=Math.round(hr/24);return`${d} day${d>1?"s":""} ago`}
+function dirLinks(lat,lng){const dest=`${lat},${lng}`;
+  const g=h("a",{class:"btnlink small",href:`https://www.google.com/maps/dir/?api=1&destination=${dest}`,target:"_blank",rel:"noopener"},"Google Maps ↗");
+  const a=h("a",{class:"btnlink small",href:`https://maps.apple.com/?daddr=${dest}`,target:"_blank",rel:"noopener"},"Apple Maps ↗");
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend" in document);return ios?[a,g]:[g,a]}
+// One card for a message or an event, used in Community, on family sheets and for a single post.
+function postCard(p,opt={}){
+  const mine=p.from===me,nm=nameOf(p.from,p.fromName),isNew=opt.newKeys?opt.newKeys.has(postKey(p)):false;
+  const card=h("div",{class:"post"+(isNew?" unseen":"")});
+  if(!opt.hideBy)card.append(h("div",{class:"by"},avatar(nm,"sm"),h("button",{class:"t",type:"button",onclick:()=>{const f=families.get(p.from);if(f){focusFamily(f);openFamily(p.from)}}},h("b",null,mine?`${nm} (you)`:nm),h("small",null,p.isEvent?`Posted ${ago(p.createdAt)}`:`${ago(p.createdAt)} · ${fmtLeft(p.expiresAt-now())}`)),isNew?h("span",{class:"newchip"},"New"):null));
+  if(p.isEvent){
+    const d=new Date(p.when);
+    card.append(h("div",{class:"ev-row"},
+      h("div",{class:"datebox","aria-hidden":"true"},h("span",{class:"m"},d.toLocaleDateString(undefined,{month:"short"})),h("span",{class:"d"},String(d.getDate())),h("span",{class:"w"},d.toLocaleDateString(undefined,{weekday:"short"}))),
+      h("div",null,h("p",{class:"txt"},p.text),h("div",{class:"ev-meta"},h("span",null,icon("clock",15),fmtWhen(p.when)),p.place?h("span",null,icon("pin",15),p.place):null))));
+    const g=h("div",{class:"going"});
+    g.append(h("span",{class:"cnt"},icon("people",16),p.going?`${p.going} going`:"No one yet"));
+    if(!mine&&!p.legacy){const on=!!goingMine.get(p.id);
+      g.append(h("button",{class:"small goingbtn"+(on?" on":" primary"),type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{await setGoing(p,!on);toast(on?"Okay, you're not going":"Great! You're going",true)}catch(x){b.disabled=false;toast("Couldn't save that. Try again.")}}},on?icon("check",15):null,on?"Going":"I'm going"))}
+    if(mine&&p.going){const box=h("div",{style:"width:100%"});
+      g.append(h("button",{class:"small",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{const s=await getDocs(collection(db,"posts",p.id,"going"));const list=[];s.forEach(x=>list.push(x.data()));list.sort((a,b)=>a.at-b.at);
+        box.replaceChildren(h("ul",{class:"goers"},...list.map(x=>h("li",null,avatar(x.name,"sm"),x.name)),list.length?null:h("li",null,"No one yet.")),h("small",{style:"color:var(--muted);font-size:12px"},"Only you can see who's going."));b.remove()}catch(x){b.disabled=false;toast("Couldn't load the list. Try again.")}}},"See who's going"),box)}
+    card.append(g);
+    if(typeof p.lat==="number"){const acts=h("div",{class:"acts"});
+      if(opt.full)acts.append(...dirLinks(p.lat,p.lng));
+      else acts.append(h("button",{class:"small",type:"button",onclick:()=>openPost(p.id)},icon("pin",15),"Show on map"));
+      card.append(acts)}
+  }else card.append(h("p",{class:"txt"},p.text));
+  if(mine||isAdmin){const acts=h("div",{class:"acts",style:"border-top:1px solid var(--line);padding-top:10px"});
+    if(mine&&!p.legacy)acts.append(h("button",{class:"small",type:"button",onclick:()=>showComposer(p)},icon("edit",14),"Edit"));
+    acts.append(h("button",{class:"small danger",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{if(p.legacy)await updateDoc(doc(db,"families",p.from),{message:null,updatedAt:now()});else await deletePost(p.id);toast(p.isEvent?"Event removed":"Post removed",true);if(sheet.dataset.mode==="postview")showCommunity()}catch(x){b.disabled=false;toast("Couldn't remove it. Try again.")}}},icon("trash",14),mine?"Delete":"Remove (admin)"));
+    card.append(acts)}
+  return card;
+}
+function showCommunity(refreshOnly){
+  if(refreshOnly)rerenderSheet("community");else openSheet("community");
+  const list=activePosts();
+  if(!refreshOnly)commNew=new Set(list.filter(isUnseen).map(postKey));
+  sheet.append(head("Community","Messages and events from families"));
+  sheet.append(families.has(me)?h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:4px;padding:12px",onclick:()=>showComposer()},icon("plus",18),"New post")
+    :h("p",{class:"note",style:"margin-top:0"},"Add your family to the map to post. ",h("button",{class:"link",type:"button",onclick:()=>openForm(me)},"Add my family")));
+  const events=list.filter(p=>p.isEvent).sort((a,b)=>a.when-b.when),msgs=list.filter(p=>!p.isEvent).sort((a,b)=>b.createdAt-a.createdAt);
+  sheet.append(h("div",{class:"section-title"},icon("cal",18),"Upcoming events"));
+  if(!events.length)sheet.append(h("p",{class:"empty-line"},"No events yet. Planning a get-together? Tap New post and add a date & place."));
+  for(const p of events)sheet.append(postCard(p,{newKeys:commNew}));
+  sheet.append(h("div",{class:"section-title"},icon("chat",18),"Messages"));
+  if(!msgs.length)sheet.append(h("p",{class:"empty-line"},"No messages right now."));
+  for(const p of msgs)sheet.append(postCard(p,{newKeys:commNew}));
+  markPostsSeen(list);
+}
+function openPost(pid,refreshOnly){
+  const p=activePosts().find(x=>x.id===pid);if(!p){if(refreshOnly)showCommunity(true);else toast("This post has ended.");return}
+  const sc=sheet.scrollTop;
+  if(refreshOnly)rerenderSheet("postview");else openSheet("postview");
+  openPostId=pid;setEvSel(pid);
+  sheet.append(head(p.isEvent?"Event":"Message",null));
+  sheet.append(postCard(p,{full:true}));
+  sheet.append(h("button",{class:"ghost",type:"button",style:"padding-left:0",onclick:()=>showCommunity()},"← All community posts"));
+  if(typeof p.lat==="number"&&!refreshOnly)requestAnimationFrame(()=>goTo(p.lat,p.lng,Math.max(map?map.getZoom():16,15)));
+  if(refreshOnly)sheet.scrollTop=sc;
+  markPostsSeen([p]);
+}
+// Event markers on the map (only events with a pinned place)
+function setEvSel(pid){for(const [k,o] of evMarkers)o.el.classList.toggle("sel",k===pid)}
+function redrawEvents(){
+  if(!map)return;
+  const evs=activePosts().filter(p=>p.isEvent&&typeof p.lat==="number");const ids=new Set(evs.map(p=>p.id));
+  for(const [id,o] of evMarkers)if(!ids.has(id)){o.mk.remove();evMarkers.delete(id)}
+  for(const p of evs){
+    const d=new Date(p.when),html=`<div class="evm"><div class="cal"><span class="m">${esc(d.toLocaleDateString(undefined,{month:"short"}))}</span><span class="d">${d.getDate()}</span></div><div class="tip"></div></div>`;
+    let o=evMarkers.get(p.id);
+    if(!o){const el=document.createElement("div");el.className="ev-icon new";el.tabIndex=0;el.setAttribute("role","button");setTimeout(()=>el.classList.remove("new"),900);
+      el.addEventListener("click",e=>{e.stopPropagation();lastFlagClick=now();if(!placing)openPost(p.id)});
+      el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openPost(p.id)}});
+      o={el,mk:new maplibregl.Marker({element:el,anchor:"bottom"}).setLngLat([p.lng,p.lat]).addTo(map)};evMarkers.set(p.id,o)}
+    else o.mk.setLngLat([p.lng,p.lat]);
+    o.el.setAttribute("aria-label",`Event on ${fmtWhen(p.when)}: ${p.text}`);
+    if(o.el._h!==html){o.el.innerHTML=html;o.el._h=html}
+    o.el.classList.toggle("sel",sheet.dataset.mode==="postview"&&openPostId===p.id);
+  }
+}
 function dayPills(name,selected){return h("div",{class:"pills",role:"radiogroup","aria-label":"How long to show it"},...DAYS.map(d=>h("label",{class:"pill"},h("input",{type:"radio",name,value:String(d),checked:d===selected}),h("span",null,`${d} day${d>1?"s":""}`))))}
-function showPostMessage(){
-  const f=families.get(me);if(!f){openForm(me);return}
-  openSheet("post");
-  const m=activeMsg(f);
-  sheet.append(head(m?"Your message":"Post a message","Everyone sees a red dot on your flag"));
-  const ta=h("textarea",{id:"pm-text",maxlength:240,rows:3,placeholder:"e.g. Bathukamma get-together on Saturday at Deutsches Eck, all welcome!"});ta.value=m?m.text:"";
-  const counter=h("span",{class:"counter"});const upd=()=>counter.textContent=`${ta.value.length}/240`;ta.oninput=upd;upd();
+const pad2=n=>String(n).padStart(2,"0");
+const ymd=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+// One form for both: a message, or (with "Add date & place") an event.
+function showComposer(edit){
+  if(!families.has(me)){openForm(me);return}
+  openSheet("compose");
+  sheet.append(head(edit?(edit.isEvent?"Edit event":"Edit post"):"New post","Everyone on the map can see it"));
+  const ta=h("textarea",{id:"pc-text",maxlength:400,rows:3,placeholder:"e.g. Ugadi potluck at our place, everyone welcome! Bring one dish."});ta.value=edit?edit.text:"";
+  const counter=h("span",{class:"counter"});const upd=()=>counter.textContent=`${ta.value.length}/400`;ta.oninput=upd;upd();
+  const evOn=h("input",{type:"checkbox",id:"pc-ev",checked:!!(edit&&edit.isEvent)});
+  const msgDays=edit&&!edit.isEvent?Math.min(14,Math.max(1,Math.round((edit.expiresAt-edit.createdAt)/86400000))):3;
+  const msgBox=h("div",{class:"evbox"},h("div",{class:"glabel"},"Show it for"),dayPills("pc-days",DAYS.includes(msgDays)?msgDays:3));
+  const wd=edit&&edit.isEvent?new Date(edit.when):null;
+  const date=h("input",{type:"date",id:"pc-date",min:ymd(new Date())});date.value=wd?ymd(wd):"";
+  const time=h("input",{type:"time",id:"pc-time"});time.value=wd?`${pad2(wd.getHours())}:${pad2(wd.getMinutes())}`:"";
+  const place=h("input",{type:"text",id:"pc-place",maxlength:120,placeholder:"e.g. Deutsches Eck, Koblenz"});place.value=edit&&edit.place||"";
+  let pin=edit&&typeof edit.lat==="number"?[edit.lat,edit.lng]:null;
+  const pinRow=h("div",{class:"place"});
+  const syncPin=()=>{pinRow.replaceChildren(...[
+    h("button",{type:"button",onclick:()=>startPlacing(null,"Event place",pin,(pp,addr)=>{pin=pp;if(addr&&!place.value.trim())place.value=addr;syncPin()},"<b>Pin the event place.</b> Search the address, or zoom in and tap the spot. Drag to fine-tune.")},icon("pin",17),pin?"Move pin":"Pin the place on the map"),
+    pin?h("span",{class:"placed yes"},icon("check",16),"Pinned"):h("span",{class:"placed"},"Optional"),
+    pin?h("button",{class:"small ghost",type:"button",onclick:()=>{pin=null;syncPin()}},"Remove pin"):null].filter(Boolean))};
+  syncPin();
+  const evBox=h("div",{class:"evbox"},
+    h("div",{class:"row2"},h("label",{for:"pc-date"},"Date",date),h("label",{for:"pc-time"},"Time",time)),
+    h("label",{for:"pc-place"},"Place",place),pinRow);
+  const syncEv=()=>{evBox.hidden=!evOn.checked;msgBox.hidden=evOn.checked};evOn.onchange=syncEv;syncEv();
   const err=h("div",{class:"err",role:"alert"});
-  const save=async(msg,b)=>{try{await updateDoc(doc(db,"families",me),{message:msg,updatedAt:now()});openFamily(me);toast(msg?"Message posted":"Message removed",true)}catch(x){if(b)b.disabled=false;err.textContent="Couldn't save. Check your connection and try again."}};
+  const go=h("button",{class:"primary grow",type:"button"},icon("send",17),edit?"Save changes":"Post");
+  go.onclick=async()=>{
+    err.textContent="";const text=ta.value.trim();if(!text){err.textContent="Write something first.";ta.focus();return}
+    const isEvent=evOn.checked,t=now(),created=edit?edit.createdAt:t;let when=null,expiresAt;
+    if(isEvent){
+      if(!date.value||!time.value){err.textContent="Choose a date and time for the event.";(date.value?time:date).focus();return}
+      if(!place.value.trim()){err.textContent="Add the place, so people know where to go.";place.focus();return}
+      when=new Date(`${date.value}T${time.value}`).getTime();
+      if(!(when>t-3600000)){err.textContent="That date is in the past. Choose a future date.";date.focus();return}
+      const end=new Date(when);end.setHours(23,59,59,999);expiresAt=Math.max(end.getTime(),when+3*3600000);
+    }else{const days=+sheet.querySelector('input[name="pc-days"]:checked').value||3;expiresAt=(edit?created:t)+days*86400000;if(edit&&expiresAt<t)expiresAt=t+days*86400000}
+    const data={from:me,fromName:((families.get(me)||{}).name||"A family").slice(0,40),text,createdAt:created,expiresAt,isEvent,when,place:isEvent?place.value.trim():"",lat:isEvent&&pin?r6(pin[0]):null,lng:isEvent&&pin?r6(pin[1]):null};
+    if(!isEvent&&data.expiresAt>data.createdAt+15*86400000)data.createdAt=t;
+    go.disabled=true;
+    try{
+      if(edit&&!edit.legacy)await updateDoc(doc(db,"posts",edit.id),data);
+      else await setDoc(doc(collection(db,"posts")),{...data,going:0});
+      toast(edit?"Saved":isEvent?"Event posted":"Posted",true);showCommunity();
+    }catch(x){go.disabled=false;err.textContent="Couldn't post it. Check your connection and try again."}
+  };
   sheet.append(h("div",{class:"fform"},
-    h("label",{for:"pm-text"},"Your message",ta),counter,
-    h("div",{class:"glabel"},"Show the red dot for"),dayPills("pm-days",m?m.days:3),err,
-    h("div",{class:"actions"},
-      h("button",{class:"primary grow",type:"button",onclick:e=>{const b=e.currentTarget;const t=ta.value.trim();if(!t){err.textContent="Write a message first.";ta.focus();return}b.disabled=true;const days=+sheet.querySelector('input[name="pm-days"]:checked').value;const keep=m&&m.text===t&&m.days===days;const tm=now();save(keep?{text:m.text,days:m.days,postedAt:m.postedAt,expiresAt:m.expiresAt}:{text:t,days,postedAt:tm,expiresAt:tm+days*86400000},b)}},icon("send",17),m?"Update message":"Post message"),
-      m?h("button",{class:"danger",type:"button",onclick:e=>{const b=e.currentTarget;b.disabled=true;save(null,b)}},"Remove"):null,
-      h("button",{type:"button",onclick:()=>openFamily(me)},"Cancel"))));
+    h("label",{for:"pc-text"},isEvent0(edit)?"What's happening?":"Your message",ta),counter,
+    h("label",{class:"switch",for:"pc-ev"},evOn,h("span",{class:"sw","aria-hidden":"true"}),h("span",{class:"tx"},"Add date & place",h("small",null,"Makes it an event with an \"I'm going\" button"))),
+    msgBox,evBox,err,
+    h("div",{class:"actions"},go,h("button",{type:"button",onclick:()=>showCommunity()},"Cancel"))));
   setTimeout(()=>ta.focus({preventScroll:true}),350);
 }
+function isEvent0(p){return!!(p&&p.isEvent)}
 
 // ---------- family search ----------
 let qTimer=0,flyTimer=0;
@@ -1148,9 +1378,11 @@ function setTemp(lat,lng,label){
   }else tempMarker.setLngLat([lng,lat]);
   $("p-done").disabled=false;
 }
-async function startPlacing(id,name,pos,onDone){
+const PLACE_HINT=$("placebar").querySelector("p").innerHTML;
+async function startPlacing(id,name,pos,onDone,hint){
   if(!map){toast("The map is still loading…");const m=await mapReady;if(!m){toast("The map couldn't load. Check your connection and reload.");return}}
   placing={id,name:name||"Your flag",pos:null,addr:null,onDone};
+  $("placebar").querySelector("p").innerHTML=hint||PLACE_HINT;
   sheet.hidden=true;$("placebar").hidden=false;$("stage").classList.add("placing");refresh();
   $("p-addr").value="";$("p-sugg").textContent="";$("p-done").disabled=true;
   showHouseNumbers(true);redrawFlags();
@@ -1283,7 +1515,7 @@ function maybeWelcome(user){
   w.onclick=e=>{if(e.target===w)close()};
   const mine=families.get(me);
   const others=[...families.values()].filter(f=>f.id!==me);
-  const unread=others.filter(f=>{const m=activeMsg(f);return m&&seen[f.id]!==m.postedAt}).sort((a,b)=>b.message.postedAt-a.message.postedAt);
+  const unread=activePosts().filter(isUnseen).sort((a,b)=>b.createdAt-a.createdAt);
   const pend=pendingCount();
   const card=h("div",{class:"card wl",role:"dialog","aria-modal":"true","aria-labelledby":"w-title",tabindex:"-1"});
   card.append(welcomeHero());
@@ -1308,10 +1540,10 @@ function maybeWelcome(user){
       h("p",{class:"motive"},unread.length||pend?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
       h("div",{class:"stats"},
         h("div",{class:"stat"},h("b",null,String(famCount)),h("span",null,famCount===1?"family on the map":"families on the map")),
-        h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new message":"new messages"))));
+        h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new post":"new posts"))));
     if(pend)card.append(h("p",{class:"note",style:"margin:0 0 10px"},h("b",null,`${pend} connection request${pend>1?"s":""}`)," waiting for your reply."));
-    if(unread.length){const ul=h("ul",{class:"news"});for(const f of unread.slice(0,3))ul.append(h("li",null,h("b",null,f.name||"Family"),": ",f.message.text.length>70?f.message.text.slice(0,70)+"…":f.message.text));card.append(ul)}
-    const first=pend||unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showActivity()}},pend?"See requests":"Read messages"):null;
+    if(unread.length){const ul=h("ul",{class:"news"});for(const p of unread.slice(0,3))ul.append(h("li",null,h("b",null,nameOf(p.from,p.fromName)),": ",p.isEvent?`Event, ${fmtWhen(p.when)}: `:"",p.text.length>70?p.text.slice(0,70)+"…":p.text));card.append(ul)}
+    const first=pend?h("button",{class:"primary",type:"button",onclick:()=>{close();showNotifications()}},"See requests"):unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showCommunity()}},"See what's new"):null;
     card.append(h("div",{class:"actions"},first,h("button",{class:first?null:"primary",type:"button",onclick:()=>{close();focusFamily(mine)}},"Show my flag"),h("button",{type:"button",onclick:close},"Explore")));
   }
   w.append(card);
