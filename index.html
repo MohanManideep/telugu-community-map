@@ -3,148 +3,320 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Koblenz Telugu Families</title>
+<meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<title>Koblenz Telugu Families</title>
-<meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&family=Mandali&display=swap">
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" media="print" onload="this.media='all'">
 <style>
+/* Layout: one-screen map app. Compact header (title, activity, menu, search), full-bleed map,
+   floating "My family" button, and a bottom sheet (side panel on wide screens) for everything else. */
 :root{
-  --bg:#eef1ec; --ink:#1c2a2f; --muted:#5b6a6e; --surface:#ffffff; --line:#d9e0dc;
-  --accent:#d9860b; --accent-ink:#ffffff; --dot:#c62f2a; --halo:#ffffff; --focus:#1f6f8b;
+  --bg:#eef1ec; --ink:#1c2a2f; --muted:#5b6a6e; --surface:#ffffff; --surface-2:#f4f6f2; --line:#dde3df;
+  --accent:#d9860b; --accent-ink:#ffffff; --accent-soft:#fdf1dd; --dot:#c62f2a; --ok:#25804d; --ok-soft:#e3f3ea;
+  --mine:#1f6f8b; --halo:#ffffff; --focus:#1f6f8b;
+  --shadow:0 12px 32px rgba(28,42,47,.16); --shadow-sm:0 2px 10px rgba(28,42,47,.12);
+  --r:14px; --ease:cubic-bezier(.2,.9,.25,1);
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
   --telugu:"Mandali","Noto Sans Telugu",ui-sans-serif,sans-serif;
   color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#11181b; --ink:#e7eeec; --muted:#9aaaae; --surface:#1f292d; --line:#33424a;
-  --accent:#f0a032; --accent-ink:#1a1206; --dot:#ff5a4f; --halo:#11181b; --focus:#7cc4dd; color-scheme:dark}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#11181b; --ink:#e7eeec; --muted:#9aaaae; --surface:#1b2428; --surface-2:#222d32; --line:#33424a;
+    --accent:#f0a032; --accent-ink:#1a1206; --accent-soft:#3a2b12; --dot:#ff5a4f; --ok:#5cc28a; --ok-soft:#173326;
+    --mine:#5cb8d6; --halo:#11181b; --focus:#7cc4dd;
+    --shadow:0 12px 32px rgba(0,0,0,.5); --shadow-sm:0 2px 10px rgba(0,0,0,.4);
+    color-scheme:dark;
+  }
   .maplibregl-canvas{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7)}
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overscroll-behavior:none}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden;position:fixed;inset:0;padding:env(safe-area-inset-top,0) 0 0;touch-action:manipulation}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden;position:fixed;inset:0;padding:env(safe-area-inset-top,0) 0 0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 .app{height:100%;display:flex;flex-direction:column}
-header{display:flex;align-items:center;gap:8px 10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap;z-index:1000}
-.brand{display:flex;flex-direction:column;min-width:0;flex:1;color:inherit;text-decoration:none;border-radius:8px;-webkit-tap-highlight-color:transparent}
-.brand:active h1{opacity:.6}
-@media (hover:hover){.brand:hover h1{color:var(--accent)}}
-.brand h1{font-family:var(--display);font-size:19px;margin:0;line-height:1.1;letter-spacing:-.01em}
-.brand small{color:var(--muted);font-size:12.5px}
-.brand small .te{font-family:var(--telugu);font-size:14px;color:var(--ink)}
-.search{flex-basis:100%;order:5;display:flex}
-@media (min-width:820px){.search{flex-basis:260px;order:0}}
-.search input{border-radius:999px;padding:7px 14px}
-button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px}
-button:disabled{opacity:.5;cursor:default}
+
+/* ---------- buttons & inputs ---------- */
+button,.btnlink{font:inherit;cursor:pointer;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;transition:background-color .15s,border-color .15s,color .15s,transform .12s,box-shadow .15s}
+button:active,.btnlink:active{transform:scale(.97)}
+button:disabled{opacity:.5;cursor:default;transform:none}
+@media (hover:hover){button:hover,.btnlink:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
-.ghost{background:transparent}
-.link{background:none;border:0;padding:0;color:var(--focus);text-decoration:underline}
-.danger{color:var(--dot);border-color:var(--dot);background:transparent}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 10px;border-radius:999px}
-.chip .d{width:8px;height:8px;border-radius:50%;background:var(--dot)}
-.stage{position:relative;flex:1;min-height:0}
+@media (hover:hover){.primary:hover{background:color-mix(in srgb,var(--accent) 88%,#000);border-color:transparent}}
+.ghost{background:transparent;border-color:transparent}
+.link{background:none;border:0;padding:0;color:var(--focus);text-decoration:underline;display:inline}
+.danger{color:var(--dot);border-color:color-mix(in srgb,var(--dot) 45%,transparent);background:transparent}
+.danger-solid{background:var(--dot);color:#fff;border-color:transparent;font-weight:700}
+.linkdanger{background:none;border:0;color:var(--dot);padding:6px 0;font-size:14px;align-self:flex-start}
+.small{padding:5px 10px;font-size:13px;border-radius:9px}
+.grow{flex:1}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.opt{font-size:12px;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;width:100%;transition:border-color .15s,background-color .15s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);background:var(--surface);outline:none}
+textarea{resize:vertical;min-height:72px}
+.err{color:var(--dot);font-size:13.5px;min-height:1em}
+.ok{color:var(--ink);font-size:13.5px}
+
+/* ---------- header ---------- */
+header{position:relative;z-index:1000;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 12px 10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none;border-radius:12px;padding:2px}
+.logo{flex:none;width:36px;height:36px;border-radius:11px;background:var(--accent-soft);display:grid;place-items:center;transition:transform .3s var(--ease)}
+.brand:active .logo{transform:scale(.9) rotate(-6deg)}
+.brand-text{min-width:0;display:flex;flex-direction:column}
+.brand h1{font-family:var(--display);font-size:17.5px;margin:0;line-height:1.15;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small .te{font-family:var(--telugu);font-size:14px;color:var(--ink)}
+@media (hover:hover){.brand:hover h1{color:var(--accent)}}
+.hdr-actions{display:flex;align-items:center;gap:6px}
+.iconbtn{position:relative;width:42px;height:42px;padding:0;border-radius:12px}
+.iconbtn.av{border:0;background:none;border-radius:50%}
+.count{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--dot);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid var(--surface);font-variant-numeric:tabular-nums}
+.count.bump{animation:bump .5s var(--ease)}
+.search{grid-column:1/-1;position:relative}
+.search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search input{padding:9px 14px 9px 38px;border-radius:999px;font-size:15px}
+@media (min-width:820px){
+  header{grid-template-columns:auto minmax(0,1fr) auto;padding:10px 16px}
+  .search{grid-column:2;grid-row:1;max-width:380px;width:100%;justify-self:center}
+  .hdr-actions{grid-column:3;grid-row:1}
+}
+
+/* ---------- avatars & chips ---------- */
+.avatar{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-family:var(--display);font-size:15px;background:var(--c,#c97a0a);letter-spacing:.02em}
+.avatar.lg{width:50px;height:50px;font-size:19px}
+.avatar.sm{width:34px;height:34px;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.chip-s{font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--surface-2);color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+.chip-s.ok{background:var(--ok-soft);color:var(--ok);font-weight:700}
+.chip-s.you{background:color-mix(in srgb,var(--mine) 14%,transparent);color:var(--mine);font-weight:700}
+
+/* ---------- map & overlays on it ---------- */
+.stage{position:relative;flex:1;min-height:0;overflow:hidden}
 #map{position:absolute;inset:0;background:var(--bg)}
 .maplibregl-map{font-family:var(--body)}
-.maplibregl-ctrl-group button{padding:0;border-radius:0}
-.placing #map .maplibregl-canvas-container{cursor:crosshair}
-.overlay{position:absolute;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(3px)}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;width:min(380px,100%);max-height:100%;overflow:auto;box-shadow:0 12px 32px rgba(0,0,0,.15)}
-.card h2{font-family:var(--display);font-size:20px;margin:0 0 4px}
-.card p{margin:0 0 12px;color:var(--muted);font-size:14px}
-#sheet{position:absolute;left:0;right:0;bottom:0;max-height:78%;overflow:auto;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.12);padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));z-index:1200}
-@media (min-width:820px){#sheet{left:auto;top:0;width:380px;max-height:none;border-radius:0;border-top:0;border-left:1px solid var(--line)}}
-.sheet-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
-.sheet-head h2{font-family:var(--display);font-size:20px;margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
-.sheet-head .sub{display:block;font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400;margin-top:2px}
-.x{width:36px;height:36px;padding:0;font-size:18px;flex:none}
-.msg{border:1px solid var(--dot);border-radius:12px;padding:10px 12px;margin-bottom:12px;background:color-mix(in srgb,var(--dot) 7%,var(--surface))}
-.msg .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--dot);font-weight:700}
-.msg p{margin:4px 0 2px;white-space:pre-wrap;overflow-wrap:anywhere}
-.msg .when{font-size:12.5px;color:var(--muted)}
-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
-dt{color:var(--muted);font-size:13px}
-dd{margin:0;min-width:0;overflow-wrap:anywhere}
-.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.inline .small{padding:3px 8px;font-size:12.5px}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-.note{font-size:13px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}
-.note b{color:var(--ink)}
-form{display:flex;flex-direction:column;gap:12px}
-fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:12px;min-width:0}
-legend{font-family:var(--display);font-size:15px;font-weight:700;padding:0;margin-bottom:2px}
-label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
-.opt{font-size:11.5px}
-input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%}
-textarea{resize:vertical;min-height:64px}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.langs{display:flex;flex-wrap:wrap;gap:8px 14px}
-.langs label{flex-direction:row;align-items:center;gap:6px;color:var(--ink);font-size:14px}
-.langs input{width:auto}
-.err{color:var(--dot);font-size:13px;min-height:1em}
-.ok{color:var(--ink);font-size:13px}
-.list{display:flex;flex-direction:column;gap:8px}
-.list button{text-align:left;display:flex;flex-direction:column;gap:2px}
-.list b{font-family:var(--display)}
-.list span{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
-.placebar{position:absolute;left:16px;right:16px;top:12px;margin:0 auto;max-width:460px;background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:1300}
-.placebar p{margin:0;font-size:14px}
-.placebar .actions{margin:0}
-.sugg{display:flex;flex-direction:column;gap:4px;max-height:170px;overflow:auto}
-.sugg button{text-align:left;padding:6px 10px;font-size:14px}
-.placed{font-size:13.5px;color:var(--muted)}
-.placed.yes{color:var(--ink)}
-.toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13.5px;z-index:2000;max-width:calc(100% - 32px);text-align:center}
-.empty{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:900;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;width:min(320px,calc(100% - 32px));text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.08)}
-.empty h2{font-family:var(--display);font-size:17px;margin:0 0 6px}
-.empty p{margin:0 0 12px;color:var(--muted);font-size:14px}
-/* flag markers */
-.flag{position:relative;width:0;height:0;transform:scale(var(--s,1));transform-origin:0 0;transition:transform .25s ease}
+.maplibregl-ctrl-group{border-radius:12px!important;overflow:hidden;box-shadow:var(--shadow-sm)!important}
+.maplibregl-ctrl-group button{width:38px;height:38px;border-radius:0;padding:0}
+.maplibregl-ctrl-bottom-left{bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+.placing .maplibregl-canvas-container{cursor:crosshair}
+.placing .fab,.placing .mapkey,.placing .loading{display:none}
+.maperr{position:absolute;inset:auto 16px 50% 16px;transform:translateY(50%);z-index:600;max-width:340px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;text-align:center;box-shadow:var(--shadow)}
+.maperr p{margin:0 0 10px;color:var(--muted)}
+.fab{position:absolute;right:14px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:800;padding:13px 18px 13px 15px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;box-shadow:0 10px 24px color-mix(in srgb,var(--accent) 40%,transparent),var(--shadow-sm);animation:fabIn .45s var(--ease) both}
+.fab.mine{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow)}
+.fab.mine svg{color:var(--mine)}
+.mapkey{position:absolute;left:12px;top:12px;z-index:700}
+.mapkey>button{padding:7px 12px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:var(--shadow-sm);border-color:transparent}
+.keypop{margin-top:8px;background:var(--surface);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);width:min(300px,calc(100vw - 24px));animation:popIn .25s var(--ease) both;transform-origin:top left}
+.loading{position:absolute;left:50%;top:14px;translate:-50% 0;z-index:750;background:var(--surface);border-radius:999px;padding:7px 14px;font-size:13px;color:var(--muted);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:8px;animation:fadeIn .3s both}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+.empty{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:600;background:var(--surface);border-radius:18px;padding:18px;width:min(320px,calc(100% - 32px));text-align:center;box-shadow:var(--shadow);animation:popIn .4s var(--ease) both}
+.empty h2{font-family:var(--display);font-size:18px;margin:6px 0}
+.empty p{margin:0 0 14px;color:var(--muted);font-size:14px}
+
+/* ---------- map key ---------- */
+.keylist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;font-size:13.5px;color:var(--ink)}
+.keylist li{display:flex;align-items:center;gap:10px}
+.k{position:relative;flex:none;width:24px;height:24px}
+.k-flag::before,.k-approx::before,.k-mine::before{content:"";position:absolute;left:6px;top:2px;width:2px;height:19px;background:var(--ink);border-radius:1px}
+.k-flag::after,.k-approx::after,.k-mine::after{content:"";position:absolute;left:8px;top:2px;width:13px;height:10px;background:var(--accent);clip-path:polygon(0 0,100% 50%,0 100%)}
+.k-approx::after{opacity:.5}
+.k-mine::after{background:var(--mine)}
+.k-dot::after,.k-ring::after{content:"";position:absolute;left:6px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--dot)}
+.k-ring::after{background:var(--surface);border:2px solid var(--dot)}
+
+/* ---------- flags ---------- */
+.flag-icon{width:0;height:0;cursor:pointer;background:none;border:0}
+.flag-icon.sel{z-index:5}
+.flag{position:relative;width:0;height:0;transform:scale(var(--s,1));transform-origin:0 0;transition:transform .25s ease,scale .3s var(--ease),translate .2s ease}
+.flag-icon.new .flag{animation:drop .6s var(--ease) var(--d,0ms) both}
+@media (hover:hover){.flag-icon:hover .flag{translate:0 -3px}}
+.flag-icon.sel .flag{scale:1.25}
 .flag.crowded .nm{display:none}
-.flag-icon:hover .flag.crowded .nm,.flag-icon:focus .flag.crowded .nm{display:block}
+.flag-icon:hover .flag.crowded .nm,.flag-icon:focus .flag.crowded .nm,.flag-icon.sel .flag.crowded .nm{display:block}
 .flag .pole{position:absolute;left:-1px;bottom:-2px;width:2px;height:30px;background:var(--ink);border-radius:1px}
-.flag .pen{position:absolute;left:1px;bottom:12px;width:18px;height:12px;background:var(--accent);clip-path:polygon(0 0,100% 50%,0 100%)}
+.flag .pen{position:absolute;left:1px;bottom:12px;width:18px;height:12px;background:var(--accent);clip-path:polygon(0 0,100% 50%,0 100%);transform-origin:left center;animation:wave 3s ease-in-out infinite}
 .flag .base{position:absolute;left:-3.5px;bottom:-5px;width:7px;height:7px;border-radius:50%;background:var(--ink)}
+.flag-icon.sel .base::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--accent);animation:ring 1.4s ease-out infinite}
 .flag .nm{position:absolute;left:22px;bottom:9px;white-space:nowrap;font-weight:700;font-size:13px;color:var(--ink);text-shadow:0 0 3px var(--halo),0 0 3px var(--halo),0 0 2px var(--halo)}
 .flag .dot{position:absolute;left:12px;bottom:23px;width:11px;height:11px;border-radius:50%;background:var(--dot);border:1.5px solid var(--halo)}
 .flag .dot.read{background:var(--halo);border:2px solid var(--dot);width:10px;height:10px}
 .flag .dot.unread::after{content:"";position:absolute;inset:-2px;border-radius:50%;background:var(--dot);animation:pulse 1.8s ease-out infinite}
-.flag.mine .pen{outline:1.5px solid var(--ink)}
-.flag.temp .pen{background:var(--accent);filter:drop-shadow(0 0 4px var(--accent))}
-@keyframes pulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(2.4)}}
-@media (prefers-reduced-motion:reduce){.flag .dot.unread::after{animation:none;opacity:0}}
-.flag-icon{width:0;height:0;cursor:pointer;background:none;border:0}
-.flag.approx .pen{opacity:.75}
-.conn{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:14px;background:var(--bg)}
-.conn h3{font-family:var(--display);font-size:15px;margin:0 0 6px}
-.conn p{margin:0 0 8px;font-size:13.5px;color:var(--muted)}
-.conn .quote{color:var(--ink);font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere}
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink)}
-.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:#2e9b5f}
-.choice{display:flex;flex-direction:column;gap:6px}
-.choice label{flex-direction:row;align-items:flex-start;gap:8px;color:var(--ink);font-size:14px}
-.choice input{width:auto;margin-top:3px}
-.choice .hint{display:block;color:var(--muted);font-size:12.5px}
-.section-title{font-family:var(--display);font-size:15px;margin:16px 0 8px}
-.item{display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-.item .who{min-width:0;overflow-wrap:anywhere}
-.item .who b{font-family:var(--display)}
-.item .who span{display:block;font-size:12.5px;color:var(--muted)}
-.req{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
-.req b{font-family:var(--display)}
-.dirs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.flag.mine .pen{background:var(--mine)}
+.flag.approx .pen{opacity:.5}
+.flag.approx .base{background:var(--halo);border:1.5px solid var(--ink)}
+.flag.temp .pen{filter:drop-shadow(0 0 5px var(--accent))}
+
+/* ---------- placing bar ---------- */
+.placebar{position:absolute;left:12px;right:12px;top:12px;margin:0 auto;max-width:460px;background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--shadow);z-index:1300;animation:slideDown .35s var(--ease) both}
+.placebar p{margin:0;font-size:14px}
+.placebar .actions{margin:0}
+.searchrow{display:flex;gap:8px}
+.searchrow input{min-width:0}
+.sugg{display:flex;flex-direction:column;gap:4px;max-height:170px;overflow:auto}
+.sugg button{justify-content:flex-start;text-align:left;padding:8px 10px;font-size:14px}
+.placed{font-size:13.5px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+.placed.yes{color:var(--ok);font-weight:700}
+
+/* ---------- bottom sheet ---------- */
+#sheet{position:absolute;left:0;right:0;bottom:0;max-height:84%;overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:22px 22px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.18);padding:4px 16px calc(20px + env(safe-area-inset-bottom,0px));z-index:1200}
+#sheet:not([hidden]){animation:sheetIn .38s var(--ease)}
+#sheet.swap{animation:none}
+#sheet.swap>*{animation:fadeUp .28s var(--ease) both}
+#sheet.swap>*:nth-child(3){animation-delay:.03s}#sheet.swap>*:nth-child(4){animation-delay:.06s}#sheet.swap>*:nth-child(n+5){animation-delay:.09s}
+#sheet.noanim>*{animation:none!important}
+#sheet.closing{animation:sheetOut .22s ease-in forwards}
+#sheet.formmode{padding-bottom:0}
+.grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:6px auto 10px;touch-action:none}
+@media (min-width:820px){
+  #sheet{left:auto;top:0;width:400px;max-height:none;border-radius:0;border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(0,0,0,.1);padding-top:14px}
+  #sheet:not([hidden]){animation-name:sideIn}
+  #sheet.closing{animation-name:sideOut}
+  .grab{display:none}
+}
+body.loggedout #sheet{z-index:1600}
+.sheet-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;touch-action:none}
+.sheet-head .t{flex:1;min-width:0}
+.sheet-head h2{font-family:var(--display);font-size:21px;line-height:1.2;margin:0;overflow-wrap:anywhere;text-wrap:balance}
+.sheet-head .sub{display:block;font-size:13.5px;color:var(--muted);margin-top:2px}
+.x{width:38px;height:38px;padding:0;border-radius:50%;flex:none;background:var(--surface-2);border-color:transparent}
+.lead{margin:0 0 14px;color:var(--muted)}
+.qa{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.note{font-size:13.5px;color:var(--muted);background:var(--surface-2);border-radius:12px;padding:11px 13px;margin:10px 0}
+.note b{color:var(--ink)}
+.section-title{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:16px;font-weight:700;margin:18px 0 10px}
+.section-title .n{background:var(--dot);color:#fff;font-family:var(--body);font-size:12px;border-radius:10px;padding:1px 8px}
+.empty-line{color:var(--muted);font-size:14px;margin:0 0 6px}
+
+/* message card */
+.msg{border-radius:var(--r);padding:12px 14px;margin-bottom:14px;background:color-mix(in srgb,var(--dot) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--dot) 30%,transparent)}
+.msg .lbl{display:flex;align-items:center;gap:6px;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--dot);font-weight:700}
+.msg p{margin:5px 0 4px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15.5px}
+.msg .when{font-size:12.5px;color:var(--muted)}
+
+/* details list */
+dl{display:grid;grid-template-columns:auto 1fr;gap:9px 16px;margin:0}
+dt{color:var(--muted);font-size:13px;padding-top:1px}
+dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dirs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
 .dirs .lbl{font-size:13px;color:var(--muted);margin-right:2px}
-.btnlink{display:inline-flex;align-items:center;padding:7px 12px;border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none;font-size:14px;background:var(--surface)}
-.btnlink:hover{border-color:var(--accent)}
-/* opening animation */
+.card{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:16px;background:var(--surface)}
+.card h3{font-family:var(--display);font-size:16px;margin:0 0 6px}
+.card p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.card.hl{border-color:color-mix(in srgb,var(--accent) 60%,transparent);background:var(--accent-soft)}
+.quote{color:var(--ink);font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere}
+.who-sees{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.who-sees li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.who-sees svg{flex:none;margin-top:1px;color:var(--muted)}
+
+/* lists */
+.list{display:flex;flex-direction:column;gap:8px}
+.person{display:flex;align-items:center;gap:12px;width:100%;text-align:left;justify-content:flex-start;padding:10px 12px;border-radius:12px}
+.person .tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.person b{font-family:var(--display);font-size:15px}
+.person .tx>span{color:var(--muted);font-size:13px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.person .udot{width:9px;height:9px;border-radius:50%;background:var(--dot);flex:none}
+.req{border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px;margin-bottom:8px}
+.req .top{display:flex;gap:12px;align-items:flex-start}
+.req .top>div{min-width:0}
+.req b{font-family:var(--display)}
+.req .actions{margin:0}
+.card.hl .req{border:0;padding:0;margin:0}
+
+/* menu rows */
+.profile{display:flex;align-items:center;gap:14px;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.profile .t{min-width:0;flex:1}
+.profile b{display:block;font-family:var(--display);font-size:18px}
+.profile .t>span{display:block;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis}
+.rows{display:flex;flex-direction:column;gap:2px;margin:0 -8px}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;justify-content:flex-start;padding:10px 8px;border:0;border-radius:12px;background:none;font-size:15.5px}
+@media (hover:hover){.row:hover{background:var(--surface-2)}}
+.row .ic{width:38px;height:38px;border-radius:11px;background:var(--surface-2);display:grid;place-items:center;flex:none}
+.row .lbl{flex:1;min-width:0;display:flex;flex-direction:column}
+.row .lbl small{color:var(--muted);font-size:12.5px}
+.row .chev{color:var(--muted);flex:none}
+.row .n{background:var(--dot);color:#fff;font-size:12px;font-weight:700;border-radius:10px;padding:1px 8px}
+
+/* FAQ */
+details.faq{border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;overflow:hidden;transition:border-color .2s}
+details.faq[open]{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+details.faq summary{padding:13px 14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.faq summary::-webkit-details-marker{display:none}
+details.faq summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translateY(-3px);transition:transform .25s var(--ease);flex:none}
+details.faq[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
+details.faq .faq-b{padding:0 14px 14px;animation:fadeUp .3s var(--ease)}
+details.faq p,details.faq ul{margin:0 0 8px;font-size:14px;color:var(--muted)}
+details.faq ul{padding-left:18px}
+details.faq li{margin-bottom:5px}
+
+/* form */
+.fform{display:flex;flex-direction:column;gap:12px}
+.step{border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.step-h{display:flex;align-items:center;gap:10px}
+.step-n{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:13px;display:grid;place-items:center;flex:none}
+.step-h b{font-family:var(--display);font-size:16.5px}
+.step-h .tag{margin-left:auto;font-size:11.5px;color:var(--muted);background:var(--surface-2);border-radius:999px;padding:3px 9px}
+.place{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.glabel{font-size:13px;color:var(--muted);margin-bottom:-4px}
+.choices{display:grid;gap:8px}
+.choice-card{flex-direction:row;align-items:flex-start;gap:11px;padding:11px 12px;border:1.5px solid var(--line);border-radius:13px;cursor:pointer;color:var(--ink);transition:border-color .15s,background-color .15s}
+.choice-card input{width:18px;height:18px;margin:2px 0 0;padding:0;accent-color:var(--accent);flex:none}
+.choice-card:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.choice-card .ic{flex:none;color:var(--muted);margin-top:1px}
+.choice-card:has(input:checked) .ic{color:var(--accent)}
+.choice-card .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.choice-card b{font-size:14.5px}
+.choice-card small{color:var(--muted);font-size:12.5px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{position:relative;display:inline-flex;flex-direction:row}
+.pill input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.pill span{display:inline-block;padding:7px 13px;border-radius:999px;border:1.5px solid var(--line);font-size:14px;color:var(--ink);transition:background-color .15s,border-color .15s,color .15s}
+.pill input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.pill input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
+.counter{align-self:flex-end;font-size:12px;color:var(--muted);margin-top:-6px;font-variant-numeric:tabular-nums}
+.formbar{position:sticky;bottom:0;z-index:2;display:flex;gap:8px;margin:4px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.formbar .primary{flex:1;padding:12px}
+
+/* ---------- auth & welcome overlays ---------- */
+.overlay{position:absolute;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn .3s both}
+.overlay .card{margin:0;width:min(390px,100%);max-height:100%;overflow:auto;border-radius:20px;padding:20px;border:0;box-shadow:var(--shadow);animation:pop .45s var(--ease) both}
+.overlay .card:focus{outline:none}
+.overlay .card h2{font-family:var(--display);font-size:22px;margin:0 0 4px}
+.overlay .card>p{margin:0 0 14px;color:var(--muted);font-size:14.5px}
+.authform{display:flex;flex-direction:column;gap:12px}
+.authform .primary{padding:12px}
+.hello{font-family:var(--telugu);font-size:21px;color:var(--accent);margin:0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.stat{background:var(--surface-2);border-radius:14px;padding:11px 13px}
+.stat b{display:block;font-family:var(--display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+.stat.hot b{color:var(--dot)}
+.steps{margin:4px 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;counter-reset:s}
+.steps li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;counter-increment:s}
+.steps li::before{content:counter(s);flex:none;width:23px;height:23px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:12.5px;display:grid;place-items:center}
+.news{margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.news li{font-size:14px;overflow-wrap:anywhere}
+.news li b::before{content:"● ";color:var(--dot)}
+
+/* ---------- toast ---------- */
+.toast{position:absolute;left:50%;top:14px;translate:-50% 0;background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:999px;font-size:14px;z-index:2000;max-width:calc(100% - 32px);text-align:center;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
+.toast:not([hidden]){animation:toastIn .35s var(--ease)}
+
+/* ---------- opening animation ---------- */
 .intro{position:fixed;inset:0;z-index:5000;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px;text-align:center;cursor:pointer;transition:opacity .5s ease,visibility .5s}
 .intro.out{opacity:0;visibility:hidden}
 .intro svg{width:min(300px,78vw);height:auto;overflow:visible}
@@ -157,34 +329,38 @@ textarea{resize:vertical;min-height:64px}
 .intro h1{font-family:var(--display);font-size:clamp(24px,6vw,34px);margin:14px 0 0;letter-spacing:-.01em;opacity:0;animation:up .5s .8s ease-out forwards}
 .intro .te{font-family:var(--telugu);font-size:clamp(18px,4.5vw,22px);color:var(--muted);opacity:0;animation:up .5s .95s ease-out forwards}
 .intro .skip{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));font-size:12.5px;color:var(--muted);opacity:0;animation:up .4s 1.2s forwards}
+
+/* ---------- motion ---------- */
 @keyframes draw{to{stroke-dashoffset:0}}
 @keyframes rise{to{transform:scaleY(1)}}
 @keyframes unfurl{to{transform:scaleX(1)}}
-@keyframes wave{0%,100%{transform:scaleX(1) skewY(0)}50%{transform:scaleX(.9) skewY(-6deg)}}
+@keyframes wave{0%,100%{transform:scaleX(1) skewY(0)}50%{transform:scaleX(.9) skewY(-5deg)}}
 @keyframes glow{0%{opacity:.5;transform:scale(.2)}100%{opacity:0;transform:scale(2.6)}}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
-/* welcome card */
-.welcome .card{animation:pop .45s cubic-bezier(.2,.9,.3,1.1) both}
-.welcome .hello{font-family:var(--telugu);font-size:20px;color:var(--accent);margin:0}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
-.stat{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-.stat b{display:block;font-family:var(--display);font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}
-.stat span{font-size:12.5px;color:var(--muted)}
-.stat.hot b{color:var(--dot)}
-.steps{margin:4px 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:s}
-.steps li{display:flex;gap:10px;align-items:flex-start;font-size:14px;counter-increment:s}
-.steps li::before{content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:12.5px;display:flex;align-items:center;justify-content:center}
-.news{margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
-.news li{font-size:14px;overflow-wrap:anywhere}
-.news li b::before{content:"● ";color:var(--dot)}
-@media (prefers-reduced-motion:reduce){.intro *,.welcome .card{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important}}
+@keyframes pop{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}}
+@keyframes sheetIn{from{transform:translateY(100%)}}
+@keyframes sheetOut{to{transform:translateY(100%)}}
+@keyframes sideIn{from{transform:translateX(100%)}}
+@keyframes sideOut{to{transform:translateX(100%)}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-16px)}}
+@keyframes toastIn{from{opacity:0;translate:-50% -16px}}
+@keyframes fabIn{from{opacity:0;transform:translateY(20px) scale(.9)}}
+@keyframes drop{0%{opacity:0;translate:0 -18px}60%{opacity:1;translate:0 2px}100%{translate:0 0}}
+@keyframes pulse{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(2.4)}}
+@keyframes ring{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.6)}}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
 <!--
-  ============ SETUP ============
-  Paste your Firebase web config below (Firebase console → Project settings → Your apps → Web app).
+  Firebase web config (Firebase console → Project settings → Your apps → Web app).
   It is safe to publish: access is controlled by the Firestore security rules, not by hiding this.
 -->
 <script>
@@ -227,39 +403,45 @@ window.FIREBASE_CONFIG = {
 <div class="app">
   <header>
     <a class="brand" href="./" id="homeLink" title="Home: back to the start and reload">
-      <h1>Koblenz Telugu Families</h1>
-      <small><span class="te">మన కుటుంబాలు</span> · Koblenz &amp; around</small>
+      <span class="logo" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M2 20c5-1 8-3 11-7" fill="none" stroke="#7fb3cc" stroke-width="2.4" stroke-linecap="round"/><path d="M22 21c-3-1-6-3-9-8" fill="none" stroke="#9cc8da" stroke-width="2" stroke-linecap="round"/><rect x="12" y="3" width="1.8" height="10.5" rx=".9" fill="currentColor"/><path d="M13.8 3l7 2.3-7 2.4z" fill="#d9860b"/></svg></span>
+      <span class="brand-text"><h1>Koblenz Telugu Families</h1><small><span class="te">మన కుటుంబాలు</span> · Koblenz &amp; around</small></span>
     </a>
-    <div class="search" id="searchWrap" hidden><input id="q" type="search" placeholder="Search families, jobs, interests…" aria-label="Search families" autocomplete="off"></div>
-    <button id="reqBtn" class="chip ghost" type="button" hidden><span class="d"></span><span id="reqCount"></span></button>
-    <button id="msgsBtn" class="chip ghost" type="button" hidden><span class="d"></span><span id="msgsCount"></span></button>
-    <button id="mineBtn" class="primary" type="button" hidden>Add my family</button>
-    <button id="infoBtn" class="ghost" type="button" aria-label="About and account">?</button>
+    <div class="hdr-actions">
+      <button id="bellBtn" class="iconbtn" type="button" aria-label="Activity" hidden><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span id="bellCount" class="count" hidden></span></button>
+      <button id="menuBtn" class="iconbtn av" type="button" aria-label="Menu" hidden></button>
+      <button id="infoBtn" class="iconbtn" type="button" aria-label="How it works and privacy"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5h.01"/></svg></button>
+    </div>
+    <div class="search" id="searchWrap" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search names, jobs, interests…" aria-label="Search families" autocomplete="off"></div>
   </header>
   <div class="stage" id="stage">
     <div id="map" aria-label="Map of Koblenz with family flags"></div>
+    <div class="mapkey" id="mapkey" hidden><button id="keyBtn" type="button" aria-expanded="false" aria-controls="keyPop">Map key</button><div id="keyPop" class="keypop" hidden></div></div>
+    <div id="loading" class="loading" hidden><span class="spin" aria-hidden="true"></span>Loading families…</div>
+    <div id="mapErr" class="maperr" hidden><p>The map couldn't load. Check your internet connection.</p><button class="primary" type="button" onclick="location.reload()">Try again</button></div>
+    <button id="fab" class="fab" type="button" hidden></button>
     <div id="empty" class="empty" hidden></div>
     <div id="placebar" class="placebar" hidden>
-      <p><b>Find your home.</b> Search your address, or tap your house on the map. You can drag the flag to fine-tune.</p>
-      <div class="inline" style="flex-wrap:nowrap"><input id="p-addr" type="search" placeholder="e.g. Löhrstraße 12, Koblenz" autocomplete="off" aria-label="Search your address"><button id="p-go" type="button">Search</button></div>
+      <p><b>Find your home.</b> Search your address, or zoom in and tap your house. Drag the flag to fine-tune.</p>
+      <div class="searchrow"><input id="p-addr" type="search" placeholder="e.g. Löhrstraße 12, Koblenz" autocomplete="off" aria-label="Search your address"><button id="p-go" type="button">Search</button></div>
       <div id="p-sugg" class="sugg"></div>
-      <div class="actions"><button id="p-loc" type="button">Use my location</button><button id="p-done" class="primary" type="button" disabled>Done</button><button id="p-cancel" type="button">Cancel</button></div>
+      <div class="actions"><button id="p-loc" type="button">Use my location</button><button id="p-done" class="primary grow" type="button" disabled>Done</button><button id="p-cancel" type="button">Cancel</button></div>
     </div>
-    <div id="toast" class="toast" hidden></div>
+    <div id="toast" class="toast" role="status" hidden></div>
     <aside id="sheet" hidden></aside>
     <div id="auth" class="overlay" hidden></div>
-    <div id="welcome" class="overlay welcome" hidden></div>
+    <div id="welcome" class="overlay" hidden></div>
   </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, query, where, writeBatch, terminate, clearIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- constants ----------
 const KOBLENZ=[50.356,7.594];
 const MAP_STYLE="https://tiles.openfreemap.org/styles/liberty";
+const MAPLIBRE_JS=["https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js","https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"];
 const introDone=window.__introDone||Promise.resolve();
 const LANGS=["Telugu","German","English","Hindi","Tamil","Kannada"];
 const DAYS=[1,3,5,7,14];
@@ -267,18 +449,28 @@ const $=id=>document.getElementById(id);
 const sheet=$("sheet");
 
 // ---------- helpers ----------
-function h(tag,props,...kids){const e=document.createElement(tag);if(props)for(const k in props){const v=props[k];if(v==null||v===false)continue;if(k==="class")e.className=v;else if(k.startsWith("on"))e[k]=v;else e.setAttribute(k,v===true?"":v)}for(const c of kids){if(c==null)continue;e.append(c.nodeType?c:String(c))}return e}
+function h(tag,props,...kids){const e=document.createElement(tag);if(props)for(const k in props){const v=props[k];if(v==null||v===false)continue;if(k==="class")e.className=v;else if(k.startsWith("on"))e[k]=v;else e.setAttribute(k,v===true?"":v)}for(const c of kids){if(c==null||c===false)continue;e.append(c.nodeType?c:String(c))}return e}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const now=()=>Date.now();
 const activeMsg=f=>f&&f.message&&f.message.text&&f.message.expiresAt>now()?f.message:null;
-function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2800)}
+const ICONS={
+  close:'<path d="M6 6l12 12M18 6 6 18"/>',plus:'<path d="M12 5v14M5 12h14"/>',flag:'<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+  chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',people:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',logout:'<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/>',
+  trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',chev:'<path d="m9 6 6 6-6 6"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  pin:'<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',check:'<path d="m5 12 5 5 9-10"/>',
+  send:'<path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>'
+};
+function icon(n,size=20){const s=document.createElementNS("http://www.w3.org/2000/svg","svg");for(const [k,v] of Object.entries({viewBox:"0 0 24 24",width:size,height:size,fill:"none",stroke:"currentColor","stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round","aria-hidden":"true"}))s.setAttribute(k,v);s.innerHTML=ICONS[n]||"";return s}
+const AV_COLORS=["#c97a0a","#c0563a","#2e8b7a","#5566b8","#9152a0","#3f8f4f","#b4527a","#2f7fa6"];
+function initials(name){const w=String(name||"?").replace(/\b(family|familie|families)\b|'s\b/gi,"").trim().split(/[\s&+,]+/).filter(Boolean);return(((w[0]||"?")[0]||"?")+(w[1]?w[1][0]:"")).toUpperCase()}
+function avatar(name,cls=""){let x=0;for(const c of String(name||""))x=(x*31+c.charCodeAt(0))>>>0;const e=h("span",{class:"avatar "+cls,"aria-hidden":"true"},initials(name));e.style.setProperty("--c",AV_COLORS[x%AV_COLORS.length]);return e}
+function toast(msg,ok){const t=$("toast");t.replaceChildren(ok?icon("check",16):"",msg);t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2800)}
 function fmtLeft(ms){const hrs=Math.round(ms/3600000);if(hrs<24)return `${Math.max(1,hrs)} hour${hrs===1?"":"s"} left`;const d=Math.round(hrs/24);return `${d} day${d>1?"s":""} left`}
 function fmtDate(ts){try{return new Date(ts).toLocaleDateString(undefined,{day:"numeric",month:"short"})}catch(e){return""}}
 function norm(s){return String(s||"").toLowerCase().replace(/ß/g,"ss").replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
 function copyRow(text){const span=h("span",{style:"user-select:all"},text);const btn=h("button",{type:"button",class:"small",onclick:async()=>{try{await navigator.clipboard.writeText(text);btn.textContent="Copied"}catch(e){btn.textContent="Copy failed"}}},"Copy");return h("div",{class:"inline"},span,btn)}
-function head(title,sub){return h("div",{class:"sheet-head"},h("h2",null,title,sub?h("span",{class:"sub"},sub):null),h("button",{class:"x ghost",type:"button","aria-label":"Close",onclick:closeSheet},"✕"))}
-function openSheet(){sheet.hidden=false;sheet.textContent="";sheet.scrollTop=0}
-function closeSheet(){sheet.hidden=true;sheet.textContent="";openId=null}
 // "Löhrstraße 12, 56068 Koblenz" -> "Löhrstraße, 56068 Koblenz"
 function partialAddress(a){return String(a||"").replace(/(\D)\s+\d+\s*[a-zA-Z]?(\s*[-–\/]\s*\d+\s*[a-zA-Z]?)?(?=\s*(,|$))/,"$1").replace(/\s+,/g,",").trim()}
 // shift of 50 m in a random direction, so an "on request" flag doesn't point at the house
@@ -286,17 +478,61 @@ const FUZZ_M=50;
 function makeFuzz(lat,angle){const a=angle==null?Math.random()*2*Math.PI:angle;return[+(FUZZ_M*Math.cos(a)/111320).toFixed(6),+(FUZZ_M*Math.sin(a)/(111320*Math.cos(lat*Math.PI/180))).toFixed(6)]}
 const r6=x=>+(+x).toFixed(6);
 
-// ---------- map ----------
-const map=new maplibregl.Map({container:"map",style:MAP_STYLE,center:[KOBLENZ[1],KOBLENZ[0]],zoom:13,maxZoom:19,attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false,touchPitch:false});
-map.touchZoomRotate.disableRotation();
-map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-left");
-let houseNumberLayers=[];
-function showHouseNumbers(show){for(const id of houseNumberLayers){try{map.setLayoutProperty(id,"visibility",show?"visible":"none")}catch(e){}}}
-map.on("load",()=>{
-  houseNumberLayers=(map.getStyle().layers||[]).filter(l=>l["source-layer"]==="housenumber").map(l=>l.id);
-  showHouseNumbers(!!placing);
-});
-function goTo(lat,lng,zoom){map.easeTo({center:[lng,lat],zoom:zoom==null?map.getZoom():zoom,duration:600})}
+// ---------- bottom sheet ----------
+let closeTimer=0;
+function openSheet(mode){
+  clearTimeout(closeTimer);
+  const wasOpen=!sheet.hidden&&!sheet.classList.contains("closing");
+  sheet.classList.remove("closing","noanim");sheet.classList.toggle("swap",wasOpen);sheet.classList.toggle("formmode",mode==="form");
+  sheet.style.transform="";sheet.hidden=false;sheet.textContent="";sheet.scrollTop=0;sheet.dataset.mode=mode||"";
+  sheet.append(h("div",{class:"grab","aria-hidden":"true"}));
+  openId=null;setSel(null);
+}
+function rerenderSheet(mode){sheet.classList.add("noanim");sheet.textContent="";sheet.dataset.mode=mode;sheet.append(h("div",{class:"grab","aria-hidden":"true"}))}
+function closeSheet(){
+  if(sheet.hidden)return;openId=null;setSel(null);sheet.dataset.mode="";
+  sheet.classList.add("closing");clearTimeout(closeTimer);
+  closeTimer=setTimeout(()=>{sheet.hidden=true;sheet.textContent="";sheet.classList.remove("closing","swap","formmode","noanim")},210);
+}
+function head(title,sub,avName){
+  return h("div",{class:"sheet-head"},avName!=null?avatar(avName,"lg"):null,
+    h("div",{class:"t"},h("h2",null,title),sub?h("span",{class:"sub"},sub):null),
+    h("button",{class:"x",type:"button","aria-label":"Close",onclick:closeSheet},icon("close",18)));
+}
+// swipe the sheet down to close it (phones)
+{let drag=null;
+ sheet.addEventListener("pointerdown",e=>{if(innerWidth>=820||!e.target.closest(".grab,.sheet-head")||e.target.closest("button,a,input,textarea,select"))return;drag={y:e.clientY,dy:0};sheet.setPointerCapture(e.pointerId);sheet.style.transition="none"});
+ sheet.addEventListener("pointermove",e=>{if(!drag)return;drag.dy=Math.max(0,e.clientY-drag.y);sheet.style.transform=`translateY(${drag.dy}px)`});
+ const end=()=>{if(!drag)return;const d=drag.dy;drag=null;sheet.style.transition="transform .22s ease";
+   if(d>90){sheet.style.transform="translateY(100%)";setTimeout(()=>{sheet.style.transition="";sheet.style.transform="";sheet.hidden=true;sheet.textContent="";sheet.classList.remove("swap","formmode","noanim");openId=null;setSel(null);sheet.dataset.mode=""},220)}
+   else{sheet.style.transform="";setTimeout(()=>sheet.style.transition="",230)}};
+ sheet.addEventListener("pointerup",end);sheet.addEventListener("pointercancel",end);}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!sheet.hidden&&!placing)closeSheet()});
+
+// ---------- map (loads in the background; the rest of the app works without it) ----------
+let map=null,houseNumberLayers=[];
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.async=true;s.onload=res;s.onerror=()=>{s.remove();rej(new Error(src))};document.head.append(s)})}
+async function loadMapLib(){if(window.maplibregl)return;for(const u of MAPLIBRE_JS){try{await loadScript(u);if(window.maplibregl)return}catch(e){}}throw new Error("map library unavailable")}
+function showHouseNumbers(show){if(!map)return;for(const id of houseNumberLayers){try{map.setLayoutProperty(id,"visibility",show?"visible":"none")}catch(e){}}}
+function initMap(){
+  map=new maplibregl.Map({container:"map",style:MAP_STYLE,center:[KOBLENZ[1],KOBLENZ[0]],zoom:13,maxZoom:19,attributionControl:false,dragRotate:false,pitchWithRotate:false,touchPitch:false});
+  map.touchZoomRotate.disableRotation();
+  map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-left");
+  map.addControl(new maplibregl.AttributionControl({compact:true}),"top-right");
+  map.on("load",()=>{houseNumberLayers=(map.getStyle().layers||[]).filter(l=>l["source-layer"]==="housenumber").map(l=>l.id);showHouseNumbers(!!placing)});
+  map.on("click",onMapClick);map.on("zoomend",scaleFlags);map.on("moveend",scaleFlags);
+  if(me)$("mapkey").hidden=false;
+  refresh();return map;
+}
+const mapReady=loadMapLib().then(initMap).catch(()=>{$("mapErr").hidden=false;return null});
+function goTo(lat,lng,zoom){if(!map)return;map.easeTo({center:[lng,lat],zoom:zoom==null?map.getZoom():zoom,duration:700})}
+let lastFlagClick=0;
+function onMapClick(e){
+  if(placing){setTemp(e.lngLat.lat,e.lngLat.lng,null);return}
+  if(now()-lastFlagClick<350||(e.originalEvent&&e.originalEvent.target&&e.originalEvent.target.closest&&e.originalEvent.target.closest(".flag-icon")))return;
+  $("keyPop").hidden=true;$("keyBtn").setAttribute("aria-expanded","false");
+  if(!sheet.hidden&&!["form","post","delete"].includes(sheet.dataset.mode))closeSheet();
+}
 
 // ---------- config check ----------
 const cfg=window.FIREBASE_CONFIG||{};
@@ -308,7 +544,7 @@ const app=initializeApp(cfg), auth=getAuth(app);
 let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){db=getFirestore(app)}
 
 // ---------- state ----------
-let me=null, isAdmin=false, families=new Map(), privates=new Map(), seen={}, openId=null, placing=null;
+let me=null, isAdmin=false, families=new Map(), privates=new Map(), seen={}, openId=null, placing=null, famLoaded=false, lastCount=0;
 let outReq=new Map(), inReq=new Map();   // keyed by the other person's id
 const markers=new Map(), privSubs=new Map(); let unsubs=[]; let migrated=false;
 
@@ -323,7 +559,7 @@ function connectedIds(){const s=new Set();for(const [k,v] of outReq)if(v.status=
 function syncPrivateSubs(){
   const want=connectedIds();if(me)want.add(me);
   for(const [id,u] of privSubs)if(!want.has(id)){u();privSubs.delete(id);privates.delete(id)}
-  for(const id of want)if(!privSubs.has(id))privSubs.set(id,onSnapshot(doc(db,"private",id),s=>{if(s.exists())privates.set(id,s.data());else privates.delete(id);refresh();if(openId===id)openFamily(id,true)},()=>{}));
+  for(const id of want)if(!privSubs.has(id))privSubs.set(id,onSnapshot(doc(db,"private",id),s=>{if(s.exists())privates.set(id,s.data());else privates.delete(id);refresh();if(openId===id&&sheet.dataset.mode==="family")openFamily(id,true)},()=>{}));
 }
 function famPos(f){const p=privates.get(f.id);if(p&&typeof p.lat==="number")return[p.lat,p.lng];return typeof f.lat==="number"?[f.lat,f.lng]:null}
 function exactPos(f){const p=privates.get(f.id);if(p&&typeof p.lat==="number")return[p.lat,p.lng];return f.approx?null:famPos(f)}
@@ -331,13 +567,13 @@ function visibleAddress(f){const p=privates.get(f.id);if(p&&p.address)return{tex
 function visibleContact(f){const p=privates.get(f.id);if(p&&p.contact)return p.contact;return f.contact||""}
 function hasHidden(f){if(privates.get(f.id))return false;return !!f.approx||f.contactPublic===false}
 
-// ---------- auth UI ----------
+// ---------- auth ----------
 function showAuth(mode="login",msg=""){
   const a=$("auth");a.hidden=false;a.textContent="";
   const email=h("input",{type:"email",id:"a-email",autocomplete:"email",required:true});
   const pw=h("input",{type:"password",id:"a-pw",autocomplete:mode==="signup"?"new-password":"current-password",minlength:6,required:true});
   const err=h("div",{class:msg?"ok":"err",role:"alert"},msg);
-  const form=h("form",{novalidate:true},
+  const form=h("form",{novalidate:true,class:"authform"},
     h("label",{for:"a-email"},"Email",email),
     mode!=="reset"?h("label",{for:"a-pw"},mode==="signup"?"Choose a password (at least 6 characters)":"Password",pw):null,
     err,
@@ -353,43 +589,44 @@ function showAuth(mode="login",msg=""){
     }catch(x){btn.disabled=false;err.textContent=authError(x&&x.code)}
   };
   const switcher=mode==="login"
-    ?h("p",{style:"margin:12px 0 0"},"New here? ",h("button",{class:"link",type:"button",onclick:()=>showAuth("signup")},"Create an account")," · ",h("button",{class:"link",type:"button",onclick:()=>showAuth("reset")},"Forgot password?"))
-    :h("p",{style:"margin:12px 0 0"},h("button",{class:"link",type:"button",onclick:()=>showAuth("login")},"Back to log in"));
+    ?h("p",{style:"margin:14px 0 0;font-size:14px"},"New here? ",h("button",{class:"link",type:"button",onclick:()=>showAuth("signup")},"Create an account")," · ",h("button",{class:"link",type:"button",onclick:()=>showAuth("reset")},"Forgot password?"))
+    :h("p",{style:"margin:14px 0 0;font-size:14px"},h("button",{class:"link",type:"button",onclick:()=>showAuth("login")},"Back to log in"));
   a.append(h("div",{class:"card"},
+    h("p",{class:"hello"},"నమస్కారం!"),
     h("h2",null,mode==="signup"?"Join the community map":mode==="reset"?"Reset your password":"Welcome"),
     h("p",null,"See Telugu families living near you in Koblenz and around, and connect with them."),
     form,switcher,
-    h("div",{class:"note"},h("b",null,"Why do I need to log in? "),"The map shows where families live, so it's only visible to members who log in. Logging in also makes sure only you can change your own family's flag.")));
+    h("div",{class:"note"},h("b",null,"Why do I need to log in? "),"The map shows where families live, so only members who log in can see it. It also makes sure only you can change your family's flag."),
+    h("p",{style:"margin:6px 0 0;font-size:13.5px"},h("button",{class:"link",type:"button",onclick:showAbout},"How it works and privacy"))));
   setTimeout(()=>email.focus(),50);
 }
 function authError(code){return({
-  "auth/invalid-credential":"Wrong email or password.","auth/wrong-password":"Wrong email or password.","auth/user-not-found":"No account with this email. Create one instead.",
+  "auth/invalid-credential":"Wrong email or password.","auth/wrong-password":"Wrong password.","auth/user-not-found":"No account with this email. Create one instead.",
   "auth/email-already-in-use":"This email already has an account. Log in instead.","auth/weak-password":"Use at least 6 characters for the password.",
   "auth/invalid-email":"That email address doesn't look right.","auth/too-many-requests":"Too many tries. Wait a few minutes and try again.",
   "auth/network-request-failed":"No internet connection. Try again."}[code]||"Something went wrong. Please try again.")}
 
 onAuthStateChanged(auth,async user=>{
   unsubs.forEach(u=>u());unsubs=[];for(const u of privSubs.values())u();privSubs.clear();privates.clear();
-  families.clear();outReq.clear();inReq.clear();redrawFlags();closeSheet();
-  $("welcome").hidden=true;
-  if(!user){me=null;isAdmin=false;for(const b of ["mineBtn","msgsBtn","reqBtn","searchWrap","empty"])$(b).hidden=true;await introDone;if(!auth.currentUser)showAuth();return}
-  me=user.uid;$("auth").hidden=true;$("searchWrap").hidden=false;
+  families.clear();outReq.clear();inReq.clear();famLoaded=false;redrawFlags();if(!sheet.hidden)closeSheet();
+  $("welcome").hidden=true;document.body.classList.toggle("loggedout",!user);
+  if(!user){me=null;isAdmin=false;refresh();$("mapkey").hidden=true;$("loading").hidden=true;await introDone;if(!auth.currentUser)showAuth();return}
+  me=user.uid;$("auth").hidden=true;$("loading").hidden=false;if(map)$("mapkey").hidden=false;refresh();
   try{isAdmin=(await getDoc(doc(db,"admins",me))).exists()}catch(e){isAdmin=false}
   let gotFam,gotSeen,gotIn;const famReady=new Promise(r=>gotFam=r),seenReady=new Promise(r=>gotSeen=r),inReady=new Promise(r=>gotIn=r);
   unsubs.push(onSnapshot(collection(db,"families"),snap=>{
-    const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));families=m;refresh();gotFam();
+    const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));families=m;famLoaded=true;$("loading").hidden=true;refresh();gotFam();
     if(openId&&!families.has(openId))closeSheet();
+    if(sheet.dataset.mode==="activity")showActivity(true);
     if(isAdmin&&!migrated){migrated=true;migrateOldFlags()}
-  },()=>{gotFam();toast("Couldn't load the families. Reload to try again.")}));
+  },()=>{gotFam();$("loading").hidden=true;toast("Couldn't load the families. Reload to try again.")}));
   unsubs.push(onSnapshot(doc(db,"seen",me),s=>{seen=s.exists()&&s.data().seen?{...s.data().seen}:{};refresh();gotSeen()},()=>gotSeen()));
-  unsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",me)),snap=>{
-    const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;syncPrivateSubs();refresh();gotIn();
-    if(openId)openFamily(openId,true);if(sheet.dataset.mode==="conn")showConnections();
-  },()=>gotIn()));
-  unsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",me)),snap=>{
-    const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;syncPrivateSubs();refresh();
-    if(openId)openFamily(openId,true);if(sheet.dataset.mode==="conn")showConnections();
-  },()=>{}));
+  const onReq=()=>{syncPrivateSubs();refresh();
+    if(openId&&sheet.dataset.mode==="family")openFamily(openId,true);
+    if(sheet.dataset.mode==="activity")showActivity(true);
+    if(sheet.dataset.mode==="conn")showConnections(true)};
+  unsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",me)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;onReq();gotIn()},()=>gotIn()));
+  unsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",me)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;onReq()},()=>{}));
   syncPrivateSubs();
   const uid=me;
   await Promise.all([introDone,famReady,Promise.race([Promise.all([seenReady,inReady]),new Promise(r=>setTimeout(r,2500))])]);
@@ -415,63 +652,84 @@ async function migrateOldFlags(){
 // ---------- flags ----------
 function flagHTML(f,{temp=false}={}){
   const m=activeMsg(f);let dot="";
-  if(m&&!temp)dot=`<span class="dot ${seen[f.id]===m.postedAt?"read":"unread"}"></span>`;
+  if(m&&!temp&&f.id!==me)dot=`<span class="dot ${seen[f.id]===m.postedAt?"read":"unread"}"></span>`;
+  if(m&&!temp&&f.id===me)dot=`<span class="dot read"></span>`;
   const approx=!temp&&!exactPos(f)?" approx":"";
   return `<div class="flag${f.id===me?" mine":""}${temp?" temp":""}${approx}"><span class="pole"></span><span class="pen"></span><span class="base"></span>${dot}<span class="nm">${esc(f.name||"Your flag")}</span></div>`;
 }
 function makeFlagEl(id){
   const el=document.createElement("div");el.className="flag-icon";el.tabIndex=0;el.setAttribute("role","button");
-  el.addEventListener("click",e=>{e.stopPropagation();if(!placing)openFamily(id)});
+  el.addEventListener("click",e=>{e.stopPropagation();lastFlagClick=now();if(!placing&&families.has(id))openFamily(id)});
   el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();if(!placing)openFamily(id)}});
   return el;
 }
+function setSel(id){for(const [k,o] of markers)o.el.classList.toggle("sel",k===id)}
 function redrawFlags(){
   for(const [id,o] of markers)if(!families.has(id)||(placing&&placing.id===id)){o.mk.remove();markers.delete(id)}
+  if(!map)return;
   const list=[...families.values()].map(f=>({f,p:famPos(f)})).filter(o=>o.p&&!(placing&&placing.id===o.f.id)).sort((a,b)=>b.p[0]-a.p[0]);
+  let fresh=0;
   for(const {f,p} of list){
     let o=markers.get(f.id);
-    if(!o){const el=makeFlagEl(f.id);o={el,mk:new maplibregl.Marker({element:el,anchor:"top-left"}).setLngLat([p[1],p[0]]).addTo(map)};markers.set(f.id,o)}
-    else o.mk.setLngLat([p[1],p[0]]);
+    if(!o){
+      const el=makeFlagEl(f.id);el.classList.add("new");el.style.setProperty("--d",Math.min(fresh++*45,600)+"ms");setTimeout(()=>el.classList.remove("new"),1300);
+      o={el,mk:new maplibregl.Marker({element:el,anchor:"top-left"}).setLngLat([p[1],p[0]]).addTo(map)};markers.set(f.id,o);
+    }else o.mk.setLngLat([p[1],p[0]]);
     o.el.setAttribute("aria-label",(f.name||"Family")+" flag");
     const html=flagHTML(f);if(o.el._h!==html){o.el.innerHTML=html;o.el._h=html}
+    o.el.classList.toggle("sel",f.id===openId);
   }
   scaleFlags();
 }
 // Flags grow when they're spread out and shrink when they're crowded together.
 function scaleFlags(){
-  const pts=[];for(const [id,o] of markers){const ll=o.mk.getLngLat();pts.push([o,map.project(ll)])}
+  if(!map)return;
+  const pts=[];for(const [id,o] of markers)pts.push([o,map.project(o.mk.getLngLat())]);
   for(const [o,p] of pts){
     let d=Infinity;for(const [o2,q] of pts){if(o2===o)continue;const dd=Math.hypot(p.x-q.x,p.y-q.y);if(dd<d)d=dd}
-    const s=d===Infinity?1.3:Math.max(.7,Math.min(1.3,.7+(d-30)/150));
+    const s=d===Infinity?1.3:Math.max(.8,Math.min(1.3,.8+(d-30)/150));
     const el=o.el.querySelector(".flag");if(!el)continue;
-    el.style.setProperty("--s",s.toFixed(2));el.classList.toggle("crowded",d<70);
+    el.style.setProperty("--s",s.toFixed(2));el.classList.toggle("crowded",d<64);
   }
 }
-map.on("zoomend",scaleFlags);map.on("moveend",scaleFlags);
 
+function unreadCount(){return[...families.values()].filter(f=>{const m=activeMsg(f);return m&&f.id!==me&&seen[f.id]!==m.postedAt}).length}
+function pendingCount(){return[...inReq.values()].filter(r=>r.status==="pending").length}
 function refresh(){
   redrawFlags();
-  const act=[...families.values()].filter(f=>activeMsg(f)),unread=act.filter(f=>seen[f.id]!==f.message.postedAt).length;
-  $("msgsBtn").hidden=!me||act.length===0;
-  $("msgsCount").textContent=unread?`${unread} new message${unread>1?"s":""}`:`${act.length} message${act.length>1?"s":""}`;
-  $("msgsBtn").querySelector(".d").style.visibility=unread?"visible":"hidden";
-  const pend=[...inReq.values()].filter(r=>r.status==="pending").length;
-  $("reqBtn").hidden=!me||pend===0;
-  $("reqCount").textContent=`${pend} request${pend>1?"s":""}`;
-  const mb=$("mineBtn");mb.hidden=!me;mb.textContent=families.has(me)?"My family":"Add my family";
+  const n=me?unreadCount()+pendingCount():0;
+  const bell=$("bellBtn"),c=$("bellCount");bell.hidden=!me;c.hidden=!n;c.textContent=n>9?"9+":String(n);
+  if(n>lastCount){c.classList.remove("bump");void c.offsetWidth;c.classList.add("bump")}lastCount=n;
+  bell.setAttribute("aria-label",n?`Activity, ${n} new`:"Activity");
+  const mb=$("menuBtn");mb.hidden=!me;
+  if(me){const mine=families.get(me);const nm=mine&&mine.name||(auth.currentUser&&auth.currentUser.email)||"?";if(mb.dataset.nm!==nm){mb.dataset.nm=nm;mb.replaceChildren(avatar(nm))}}
+  $("infoBtn").hidden=!!me;$("searchWrap").hidden=!me;
+  const fab=$("fab");fab.hidden=!me||!famLoaded;
+  if(me){const has=families.has(me);const label=has?"My family":"Add my family";if(fab.dataset.l!==label){fab.dataset.l=label;fab.replaceChildren(icon(has?"flag":"plus",19),h("span",null,label));fab.classList.toggle("mine",has)}}
   const e=$("empty");
-  if(me&&families.size===0){e.hidden=false;e.textContent="";e.append(h("h2",null,"No families on the map yet"),h("p",null,"Be the first: add your family and put your flag on your home."),h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Add my family"))}
+  if(me&&famLoaded&&families.size===0){if(e.hidden){e.hidden=false;e.replaceChildren(h("p",{class:"hello"},"నమస్కారం!"),h("h2",null,"No families on the map yet"),h("p",null,"Be the first! Add your family and put your flag on your home."),h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("plus",18),"Add my family"))}}
   else e.hidden=true;
 }
 setInterval(()=>{if(families.size)refresh()},60000);
-function focusFamily(f){const p=famPos(f);if(p)goTo(p[0],p[1],Math.max(map.getZoom(),16))}
+function focusFamily(f){const p=famPos(f);if(!p)return;if(map)goTo(p[0],p[1],Math.max(map.getZoom(),16));else mapReady.then(m=>{if(m)goTo(p[0],p[1],16)})}
+$("fab").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
+$("bellBtn").onclick=()=>showActivity();
+$("menuBtn").onclick=showMenu;
+$("infoBtn").onclick=showAbout;
+$("keyBtn").onclick=()=>{const p=$("keyPop");p.hidden=!p.hidden;$("keyBtn").setAttribute("aria-expanded",String(!p.hidden));if(!p.hidden&&!p.firstChild)p.append(legendList(true))};
 
 async function markSeen(f){
-  const m=activeMsg(f);if(!m||!me||seen[f.id]===m.postedAt)return;
+  const m=activeMsg(f);if(!m||!me||f.id===me||seen[f.id]===m.postedAt)return;
   seen={...seen,[f.id]:m.postedAt};refresh();
   const keep={};for(const id in seen){const g=families.get(id);if(g&&activeMsg(g))keep[id]=seen[id]}
   try{await setDoc(doc(db,"seen",me),{seen:keep})}catch(e){}
 }
+function legendList(short){return h("ul",{class:"keylist"},
+  h("li",null,h("span",{class:"k k-flag"}),short?"A family. Tap a flag to see who they are.":"A family's flag. Tap it to see who they are."),
+  h("li",null,h("span",{class:"k k-mine"}),"Blue flag: your own family."),
+  h("li",null,h("span",{class:"k k-dot"}),"Red dot: a new message from this family."),
+  h("li",null,h("span",{class:"k k-ring"}),"Ring: a message you've already read."),
+  h("li",null,h("span",{class:"k k-approx"}),"Lighter flag: shown near the home, not on the exact house."))}
 
 // ---------- connections ----------
 async function sendRequest(to,note){
@@ -487,179 +745,262 @@ async function removeConnection(id){
   if(o)await deleteDoc(doc(db,"requests",o.id));
   if(i&&i.status==="accepted")await deleteDoc(doc(db,"requests",i.id));
 }
+function nameOf(id,fallback){const f=families.get(id);return f&&f.name||fallback||"A family"}
+function reqCard(r){
+  const err=h("div",{class:"err",role:"alert"});
+  const nm=nameOf(r.from,r.fromName);
+  return h("div",{class:"req"},
+    h("div",{class:"top"},avatar(nm,"sm"),h("div",null,h("b",null,nm),h("div",{style:"font-size:13px;color:var(--muted)"},"wants to connect with you"),r.note?h("div",{class:"quote",style:"margin-top:6px"},`"${r.note}"`):null)),
+    h("div",{class:"actions"},
+      h("button",{class:"primary",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{await answerRequest(r.from,true);toast("You're now connected",true)}catch(x){b.disabled=false;err.textContent="Couldn't accept. Try again."}}},icon("check",17),"Accept"),
+      h("button",{type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{await answerRequest(r.from,false);toast("Request declined")}catch(x){b.disabled=false;err.textContent="Couldn't decline. Try again."}}},"Decline"),
+      families.has(r.from)&&!(sheet.dataset.mode==="family"&&openId===r.from)?h("button",{class:"ghost",type:"button",onclick:()=>{focusFamily(families.get(r.from));openFamily(r.from)}},"See their flag"):null),err);
+}
 function connectBox(f){
-  const id=f.id,st=connStatus(id),box=h("div",{class:"conn"});
-  const name=f.name||"This family";
-  if(st==="connected"){
-    box.append(h("span",{class:"badge"},"Connected"),h("p",{style:"margin:6px 0 0"},"You can see each other's full address and contact."));
-    return box;
-  }
-  if(st==="incoming"){
-    const r=inReq.get(id);
-    box.append(h("h3",null,`${name} wants to connect`));
-    if(r.note)box.append(h("p",{class:"quote"},`"${r.note}"`));
-    const err=h("div",{class:"err",role:"alert"});
-    box.append(h("div",{class:"actions",style:"margin-top:4px"},
-      h("button",{class:"primary",type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(id,true);toast("Connected")}catch(x){e.target.disabled=false;err.textContent="Couldn't accept. Try again."}}},"Accept"),
-      h("button",{type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(id,false);toast("Request declined")}catch(x){e.target.disabled=false;err.textContent="Couldn't decline. Try again."}}},"Decline")),err);
-    return box;
-  }
-  if(st==="sent"){
-    box.append(h("h3",null,"Request sent"),h("p",{style:"margin:0"},`Waiting for ${name} to reply. Once they accept, you'll see their full address and contact here.`));
-    return box;
-  }
-  box.append(h("h3",null,hasHidden(f)?"Connect to see more":"Connect"),
-    h("p",null,hasHidden(f)?`${name} shares their full address and contact only with connected families.`:`Let ${name} know you'd like to get in touch.`));
-  if(!families.has(me)){
-    box.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Add your family first"));
-    box.append(h("p",{style:"margin:8px 0 0"},"So they know who is asking."));
-    return box;
-  }
-  const ta=h("textarea",{id:"c-note",maxlength:200,rows:2,placeholder:"Optional note, e.g. We just moved to Lützel and have a 4-year-old too!"});
+  const id=f.id,st=connStatus(id),name=f.name||"This family";
+  if(st==="connected")return h("div",{class:"card"},h("h3",null,"You're connected"),h("p",{style:"margin:0"},"You can both see each other's full address and contact."));
+  if(st==="incoming")return h("div",{class:"card hl",style:"margin-top:0;margin-bottom:14px"},reqCard(inReq.get(id)));
+  if(st==="sent")return h("div",{class:"card"},h("h3",null,"Request sent"),h("p",{style:"margin:0"},`Waiting for ${name} to reply. When they accept, their full address and contact appear here.`));
+  const box=h("div",{class:"card",id:"connect-box"});
+  box.append(h("h3",null,`Connect with ${name}`),
+    h("p",null,hasHidden(f)?`${name} shares their exact address and contact only with connected families. When they accept, you both see each other's details.`:`Let ${name} know you'd like to get in touch. When they accept, you both see each other's details.`));
+  if(!families.has(me)){box.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("plus",18),"Add your family first"),h("p",{style:"margin:8px 0 0;font-size:13px"},"So they know who is asking."));return box}
+  const ta=h("textarea",{id:"c-note",maxlength:200,rows:2,placeholder:"e.g. Hi! We just moved to Lützel and have a 4-year-old too."});
   const err=h("div",{class:"err",role:"alert"});
   box.append(h("label",{for:"c-note"},h("span",null,"Add a short note ",h("span",{class:"opt"},"(optional)")),ta),err,
-    h("div",{class:"actions",style:"margin-top:8px"},h("button",{class:"primary",type:"button",onclick:async e=>{e.target.disabled=true;err.textContent="";try{await sendRequest(id,ta.value.trim());toast("Request sent")}catch(x){e.target.disabled=false;err.textContent="Couldn't send the request. Try again."}}},"Send connection request")));
+    h("div",{class:"actions",style:"margin-top:8px"},h("button",{class:"primary",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;err.textContent="";try{await sendRequest(id,ta.value.trim());toast("Request sent",true)}catch(x){b.disabled=false;err.textContent="Couldn't send the request. Try again."}}},icon("send",17),"Send request")));
   return box;
 }
-function showConnections(){
-  openSheet();openId=null;sheet.dataset.mode="conn";
-  sheet.append(head("Connections","Families who can see each other's details"));
-  const nameOf=(id,fallback)=>{const f=families.get(id);return f&&f.name||fallback||"A family"};
-  const incoming=[...inReq.values()].filter(r=>r.status==="pending").sort((a,b)=>b.createdAt-a.createdAt);
-  const conns=[...connectedIds()];
-  const sent=[...outReq.values()].filter(r=>r.status!=="accepted");
-  sheet.append(h("div",{class:"section-title"},`Requests (${incoming.length})`));
-  if(!incoming.length)sheet.append(h("p",{class:"note"},"No new requests."));
-  for(const r of incoming){
-    const err=h("div",{class:"err",role:"alert"});
-    sheet.append(h("div",{class:"req"},h("b",null,nameOf(r.from,r.fromName)),r.note?h("span",{class:"conn quote",style:"border:0;padding:0;margin:0;background:none"},`"${r.note}"`):null,
-      h("div",{class:"inline"},
-        h("button",{class:"primary",type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(r.from,true);toast("Connected")}catch(x){e.target.disabled=false;err.textContent="Couldn't accept. Try again."}}},"Accept"),
-        h("button",{type:"button",onclick:async e=>{e.target.disabled=true;try{await answerRequest(r.from,false)}catch(x){e.target.disabled=false;err.textContent="Couldn't decline. Try again."}}},"Decline"),
-        families.has(r.from)?h("button",{class:"ghost",type:"button",onclick:()=>{const f=families.get(r.from);focusFamily(f);openFamily(r.from)}},"See on map"):null),err));
-  }
-  sheet.append(h("div",{class:"section-title"},`Connected (${conns.length})`));
-  if(!conns.length)sheet.append(h("p",{class:"note"},"No connections yet. Tap a family's flag and send a request."));
-  const list=h("div",{class:"list"});
-  for(const id of conns){
-    const rm=h("button",{class:"small danger",type:"button",onclick:async()=>{rm.disabled=true;try{await removeConnection(id);toast("Connection removed")}catch(x){rm.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove");
-    list.append(h("div",{class:"item"},h("div",{class:"who"},h("b",null,nameOf(id)),h("span",null,(privates.get(id)||{}).address||"")),
-      h("div",{class:"inline"},families.has(id)?h("button",{class:"small",type:"button",onclick:()=>{focusFamily(families.get(id));openFamily(id)}},"Open"):null,rm)));
-  }
-  sheet.append(list);
-  if(sent.length){
-    sheet.append(h("div",{class:"section-title"},`Sent (${sent.length})`));
-    for(const r of sent){
-      const c=h("button",{class:"small",type:"button",onclick:async()=>{c.disabled=true;try{await deleteDoc(doc(db,"requests",r.id));toast("Request cancelled")}catch(x){c.disabled=false;toast("Couldn't cancel it. Try again.")}}},"Cancel");
-      sheet.append(h("div",{class:"item"},h("div",{class:"who"},h("b",null,nameOf(r.to)),h("span",null,"Waiting for reply")),r.status==="pending"?c:null));
-    }
-  }
-}
-$("reqBtn").onclick=showConnections;
 
-// ---------- details ----------
-function openFamily(id,keepScroll){
+// ---------- family details ----------
+function openFamily(id,refreshOnly){
   const f=families.get(id);if(!f)return;
-  const sc=sheet.scrollTop;openId=id;sheet.hidden=false;sheet.textContent="";sheet.dataset.mode="";
-  sheet.append(head(f.name||"Family"));
+  const sc=sheet.scrollTop;
+  if(refreshOnly)rerenderSheet("family");else openSheet("family");
+  openId=id;setSel(id);
+  const mine=id===me,st=mine?"mine":connStatus(id),addr=visibleAddress(f);
+  sheet.append(head(f.name||"Family",addr?addr.text:null,f.name||"Family"));
+  const chips=h("div",{class:"chips"});
+  if(mine)chips.append(h("span",{class:"chip-s you"},"Your family"));
+  if(st==="connected")chips.append(h("span",{class:"chip-s ok"},icon("check",13),"Connected"));
+  if(!mine&&!exactPos(f))chips.append(h("span",{class:"chip-s"},icon("pin",13),"Flag shown near the home"));
+  if(chips.children.length)sheet.append(chips);
+  const qa=h("div",{class:"qa"});
+  if(mine)qa.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("edit",17),"Edit"),h("button",{type:"button",onclick:showPostMessage},icon("chat",17),activeMsg(f)?"Change message":"Post a message"));
+  else if(st==="none"&&families.has(me))qa.append(h("button",{class:"primary",type:"button",onclick:()=>{const b=$("connect-box");if(b){b.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{const t=$("c-note");if(t)t.focus({preventScroll:true})},450)}}},icon("people",17),"Connect"));
+  if(qa.children.length)sheet.append(qa);
+  if(st==="incoming")sheet.append(connectBox(f));
   const m=activeMsg(f);
-  if(m)sheet.append(h("div",{class:"msg"},h("div",{class:"lbl"},"Message to the community"),h("p",null,m.text),h("div",{class:"when"},`Posted ${fmtDate(m.postedAt)} · ${fmtLeft(m.expiresAt-now())}`)));
+  if(m)sheet.append(h("div",{class:"msg"},h("div",{class:"lbl"},icon("chat",14),mine?"Your message":"Message to the community"),h("p",null,m.text),h("div",{class:"when"},`Posted ${fmtDate(m.postedAt)} · ${fmtLeft(m.expiresAt-now())}`)));
   const dl=h("dl"),add=(k,v)=>{if(v==null||v==="")return;dl.append(h("dt",null,k),h("dd",null,v))};
-  const addr=visibleAddress(f);
-  if(addr)add(addr.full?"Address":"Area",addr.full?copyRow(addr.text):h("span",null,addr.text,h("span",{class:"opt",style:"color:var(--muted)"}," · flag shown nearby, not exact")));
+  if(addr&&addr.full)add("Address",copyRow(addr.text));
   add("What we do",f.profession);add("Interests",f.interests);
   if(f.members||f.kids)add("Family",[f.members?`${f.members} member${f.members>1?"s":""}`:null,f.kids?`${f.kids} kid${f.kids>1?"s":""}`:null].filter(Boolean).join(" · "));
   if(f.languages&&f.languages.length)add("Languages",f.languages.join(", "));
   add("About us",f.about);
   const contact=visibleContact(f);if(contact)add("Contact",copyRow(contact));
-  sheet.append(dl.children.length?dl:h("p",{class:"note"},"This family hasn't shared more details yet."));
+  if(dl.children.length)sheet.append(dl);else if(!mine)sheet.append(h("p",{class:"empty-line"},"This family hasn't shared more details yet."));
   const ex=exactPos(f);
-  if(ex){
+  if(ex&&!mine){
     const dest=`${ex[0]},${ex[1]}`;
     const g=h("a",{class:"btnlink",href:`https://www.google.com/maps/dir/?api=1&destination=${dest}`,target:"_blank",rel:"noopener"},"Google Maps ↗");
     const a=h("a",{class:"btnlink",href:`https://maps.apple.com/?daddr=${dest}`,target:"_blank",rel:"noopener"},"Apple Maps ↗");
     const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend" in document);
     sheet.append(h("div",{class:"dirs"},h("span",{class:"lbl"},"Directions"),...(ios?[a,g]:[g,a])));
   }
-  if(id===me){
-    sheet.append(h("p",{class:"note"},h("b",null,"Who sees what: "),
-      `Exact location and address: ${f.approx?"only connected families (others see your flag nearby)":"everyone"}. Contact: ${f.contactPublic?"everyone":"only connected families"}.`));
-    sheet.append(h("div",{class:"actions"},h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},"Edit my family"),h("button",{type:"button",onclick:showConnections},"My connections")));
-  }else{
-    sheet.append(connectBox(f));
-    if(isAdmin)sheet.append(h("div",{class:"actions"},h("button",{type:"button",onclick:()=>openForm(id)},"Edit (admin)"),h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Remove pin")));
-  }
-  if(keepScroll)sheet.scrollTop=sc;
+  if(mine){
+    sheet.append(h("div",{class:"card"},h("h3",null,"Who sees what"),h("ul",{class:"who-sees"},
+      h("li",null,icon(f.approx?"lock":"globe",17),h("span",null,h("b",null,"Exact location and address: "),f.approx?"only connected families. Others see your street and your flag about 50 m away.":"everyone on the map.")),
+      h("li",null,icon(f.contactPublic?"globe":"lock",17),h("span",null,h("b",null,"Contact: "),f.contactPublic?"everyone on the map.":"only connected families.")))),
+      h("div",{class:"actions"},h("button",{type:"button",onclick:()=>showConnections()},icon("people",17),`My connections (${connectedIds().size})`)));
+  }else if(st!=="incoming")sheet.append(connectBox(f));
+  if(isAdmin&&!mine)sheet.append(h("div",{class:"actions",style:"margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"},h("span",{style:"font-size:12.5px;color:var(--muted);width:100%"},"Admin"),h("button",{class:"small",type:"button",onclick:()=>openForm(id)},icon("edit",15),"Edit"),h("button",{class:"small danger",type:"button",onclick:()=>confirmRemove(id)},icon("trash",15),"Remove flag")));
+  if(refreshOnly)sheet.scrollTop=sc;
   markSeen(f);
 }
 function confirmRemove(id){
-  const f=families.get(id);if(!f)return;openSheet();
-  sheet.append(head("Remove this flag?"),h("p",null,`"${f.name||"Family"}" and their message will be removed from the map for everyone.`),
+  const f=families.get(id);if(!f)return;openSheet("delete");
+  sheet.append(head("Remove this flag?",null),h("p",{class:"lead"},`"${f.name||"Family"}" and their message will be removed from the map for everyone. Connections stay.`),
     h("div",{class:"actions"},
-      h("button",{class:"danger",type:"button",onclick:async e=>{e.target.disabled=true;try{const b=writeBatch(db);b.delete(doc(db,"families",id));b.delete(doc(db,"private",id));await b.commit();closeSheet();toast("Flag removed")}catch(x){e.target.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove"),
+      h("button",{class:"danger-solid",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{const wb=writeBatch(db);wb.delete(doc(db,"families",id));wb.delete(doc(db,"private",id));await wb.commit();closeSheet();toast("Flag removed",true)}catch(x){b.disabled=false;toast("Couldn't remove it. Try again.")}}},icon("trash",17),"Remove flag"),
       h("button",{type:"button",onclick:()=>id===me?openForm(id):openFamily(id)},"Cancel")));
 }
-$("msgsBtn").onclick=()=>{
-  openSheet();openId=null;sheet.dataset.mode="";sheet.append(head("Community messages","Tap one to see the family"));
+
+// ---------- activity (bell) ----------
+function showActivity(refreshOnly){
+  if(refreshOnly)rerenderSheet("activity");else openSheet("activity");
+  sheet.append(head("Activity","Requests and community messages"));
+  const incoming=[...inReq.values()].filter(r=>r.status==="pending").sort((a,b)=>b.createdAt-a.createdAt);
+  sheet.append(h("div",{class:"section-title"},"Connection requests",incoming.length?h("span",{class:"n"},String(incoming.length)):null));
+  if(!incoming.length)sheet.append(h("p",{class:"empty-line"},"No requests waiting."));
+  for(const r of incoming)sheet.append(reqCard(r));
+  const msgs=[...families.values()].filter(f=>activeMsg(f)).sort((a,b)=>b.message.postedAt-a.message.postedAt);
+  sheet.append(h("div",{class:"section-title"},"Messages"));
+  if(!msgs.length)sheet.append(h("p",{class:"empty-line"},families.has(me)?"No messages right now. Post one from your family's flag.":"No messages right now."));
   const list=h("div",{class:"list"});
-  for(const f of [...families.values()].filter(f=>activeMsg(f)).sort((a,b)=>b.message.postedAt-a.message.postedAt)){
-    const unread=seen[f.id]!==f.message.postedAt;
-    list.append(h("button",{type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},h("b",null,(unread?"● ":"")+(f.name||"Family")),h("span",null,f.message.text.length>90?f.message.text.slice(0,90)+"…":f.message.text)));
+  for(const f of msgs){const unread=f.id!==me&&seen[f.id]!==f.message.postedAt;
+    list.append(h("button",{class:"person",type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},avatar(f.name,"sm"),
+      h("span",{class:"tx"},h("b",null,f.id===me?`${f.name} (you)`:f.name||"Family"),h("span",null,f.message.text),h("small",{style:"color:var(--muted);font-size:12px"},`${fmtDate(f.message.postedAt)} · ${fmtLeft(f.message.expiresAt-now())}`)),
+      unread?h("span",{class:"udot","aria-label":"New"}):null))}
+  sheet.append(list);
+}
+
+// ---------- connections ----------
+function showConnections(refreshOnly){
+  if(refreshOnly)rerenderSheet("conn");else openSheet("conn");
+  sheet.append(head("My connections","Families who can see each other's full details"));
+  const pend=pendingCount();
+  if(pend)sheet.append(h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:6px",onclick:()=>showActivity()},`${pend} request${pend>1?"s":""} waiting for you`));
+  const conns=[...connectedIds()];
+  sheet.append(h("div",{class:"section-title"},`Connected (${conns.length})`));
+  if(!conns.length)sheet.append(h("p",{class:"empty-line"},"No connections yet. Tap a family's flag and send a request."));
+  const list=h("div",{class:"list"});
+  for(const id of conns){
+    const rm=h("button",{class:"small danger",type:"button",onclick:async e=>{e.stopPropagation();rm.disabled=true;try{await removeConnection(id);toast("Connection removed")}catch(x){rm.disabled=false;toast("Couldn't remove it. Try again.")}}},"Remove");
+    const nm=nameOf(id);
+    list.append(h("div",{class:"req",style:"flex-direction:row;align-items:center"},avatar(nm,"sm"),h("div",{style:"flex:1;min-width:0"},h("b",null,nm),h("div",{style:"font-size:13px;color:var(--muted);overflow-wrap:anywhere"},(privates.get(id)||{}).address||"")),
+      families.has(id)?h("button",{class:"small",type:"button",onclick:()=>{focusFamily(families.get(id));openFamily(id)}},"Open"):null,rm));
   }
   sheet.append(list);
-};
-$("mineBtn").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
-$("infoBtn").onclick=()=>{
-  openSheet();openId=null;sheet.dataset.mode="";sheet.append(head("About this map"),
-    h("p",null,"A members-only map for Telugu families in Koblenz and nearby towns, so you can see who lives close by and say hello."),
-    h("div",{class:"note"},h("b",null,"Why log in? "),"The map shows where families live, so only logged-in members can see it. Logging in also makes sure only you can change your family's flag. The admin can edit or remove any flag to keep the map tidy."),
-    h("div",{class:"note"},h("b",null,"Your privacy. "),"You decide who sees your exact location, address and contact: everyone, or only families you've connected with. Others then see only your street and a flag placed nearby."),
-    h("div",{class:"note"},h("b",null,"Connections. "),"Send a request from any family's flag, with a short note if you like. Once they accept, you both see each other's full details. You only need to connect once, and you can remove a connection any time."),
-    h("div",{class:"note"},h("b",null,"Messages. "),"Post a short message with your flag. A red dot appears on your flag for everyone, turns into a ring once they've read it, and disappears after the days you choose."));
-  if(me)sheet.append(h("div",{class:"actions",style:"margin-top:0"},h("button",{type:"button",onclick:showConnections},`My connections (${connectedIds().size})`)),
-    h("p",{class:"note"},"Logged in as ",h("b",null,auth.currentUser&&auth.currentUser.email||""),isAdmin?" (admin)":""),
-    h("details",null,h("summary",{style:"font-size:13px;color:var(--muted)"},"Your user ID (for admin setup)"),copyRow(me)),
-    h("div",{class:"actions"},h("button",{type:"button",onclick:()=>signOut(auth)},"Log out")));
-};
+  const sent=[...outReq.values()].filter(r=>r.status==="pending");
+  if(sent.length){
+    sheet.append(h("div",{class:"section-title"},`Sent, waiting for reply (${sent.length})`));
+    for(const r of sent){
+      const c=h("button",{class:"small",type:"button",onclick:async()=>{c.disabled=true;try{await deleteDoc(doc(db,"requests",r.id));toast("Request cancelled")}catch(x){c.disabled=false;toast("Couldn't cancel it. Try again.")}}},"Cancel");
+      const nm=nameOf(r.to);sheet.append(h("div",{class:"req",style:"flex-direction:row;align-items:center"},avatar(nm,"sm"),h("b",{style:"flex:1"},nm),c));
+    }
+  }
+}
+
+// ---------- menu ----------
+function showMenu(){
+  openSheet("menu");
+  const mine=families.get(me),email=auth.currentUser&&auth.currentUser.email||"";
+  const row=(ic,label,sub,onclick,extra)=>h("button",{class:"row",type:"button",onclick},h("span",{class:"ic"},icon(ic,19)),h("span",{class:"lbl"},label,sub?h("small",null,sub):null),extra||null,icon("chev",18));
+  const pend=pendingCount(),conns=connectedIds().size;
+  sheet.append(h("div",{class:"profile"},avatar(mine?mine.name:email,"lg"),h("div",{class:"t"},h("b",null,mine?mine.name:"No flag yet"),h("span",null,email),isAdmin?h("span",{class:"chip-s you",style:"display:inline-flex;margin-top:4px"},"Admin"):null),h("button",{class:"x",type:"button","aria-label":"Close",onclick:closeSheet},icon("close",18))));
+  sheet.append(h("div",{class:"rows"},
+    row("flag",mine?"My family":"Add my family",mine?"See and edit your flag":"Put your family on the map",()=>{if(mine){focusFamily(mine);openFamily(me)}else openForm(me)}),
+    mine?row("chat",activeMsg(mine)?"Change my message":"Post a message","Shows a red dot on your flag",showPostMessage):null,
+    row("people","My connections",`${conns} connected`,()=>showConnections(),pend?h("span",{class:"n"},`${pend} new`):null),
+    row("info","How it works & privacy","Flags, connections, who sees what",showAbout),
+    row("logout","Log out",null,()=>signOut(auth))));
+  sheet.append(h("div",{style:"margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"},h("button",{class:"linkdanger",type:"button",onclick:showDelete},icon("trash",16),"Delete my account")));
+}
+
+// ---------- about & privacy ----------
+function showAbout(){
+  openSheet("about");
+  sheet.append(head("How it works & privacy"));
+  sheet.append(h("p",{class:"lead"},"A members-only map for Telugu families in Koblenz and nearby towns, so you can see who lives close by, connect, and meet."));
+  const faq=(q,open,...kids)=>h("details",{class:"faq",open},h("summary",null,q),h("div",{class:"faq-b"},...kids));
+  const ul=(...items)=>h("ul",null,...items.map(t=>h("li",null,t)));
+  sheet.append(
+    faq("What do the flags mean?",true,legendList()),
+    faq("Why do I need to log in?",false,h("p",null,"The map shows where families live, so only members who log in can see it. Logging in also makes sure only you can change your family's flag.")),
+    faq("Who can see my details?",false,ul(
+      "Everyone logged in: your family name, street and postcode, what you do, interests, languages, \"about us\" and your message.",
+      "Your exact location, full address and contact: you choose for each one, either everyone or only families you've connected with.",
+      "The admin can see all details, including hidden ones, to keep the map safe and tidy.")),
+    faq("How do connections work?",false,h("p",null,"Open a family's flag and send a request, with a short note if you like. When they accept, you both see each other's full address, contact and directions. You only connect once, and either of you can remove the connection at any time.")),
+    faq("How do messages work?",false,h("p",null,"Post a short message from your flag, like an event or a question. Everyone sees a red dot on your flag. It turns into a ring once they've read it, and disappears after the days you choose.")),
+    faq("Privacy: what's stored and where",false,ul(
+      "Your email address, for logging in. Other members never see it.",
+      "What you enter for your flag, your connections and requests, and which messages you've read.",
+      "Everything is stored with Google Firebase. It's not used for ads and never sold or shared.",
+      "The map comes from OpenFreeMap and OpenStreetMap. When you search for an address, the search text is sent to OpenStreetMap's address search (Nominatim).",
+      "Questions? Ask the admin in the community WhatsApp group.")),
+    faq("Deleting your account",false,h("p",null,"You can delete your account at any time. It removes your flag, details, message, connections and login straight away."),me?h("button",{class:"danger",type:"button",onclick:showDelete},icon("trash",16),"Delete my account"):h("p",null,"Log in first, then open the menu (top right) and choose Delete my account.")));
+  if(me)sheet.append(h("details",{style:"margin-top:10px"},h("summary",{style:"font-size:13px;color:var(--muted);cursor:pointer"},"Your user ID (for admin setup)"),h("div",{style:"margin-top:6px"},copyRow(me))));
+}
+
+// ---------- delete account ----------
+function showDelete(){
+  openSheet("delete");
+  sheet.append(head("Delete your account?",null));
+  sheet.append(h("p",{class:"lead",style:"margin-bottom:8px"},"This removes everything about you from the map, straight away:"),
+    h("ul",{class:"who-sees",style:"margin-bottom:12px"},...["Your flag, address and contact","Your message","Your connections and requests","Your login"].map(t=>h("li",null,icon("check",17),t))),
+    h("p",{style:"margin:0 0 12px"},h("b",null,"This can't be undone.")));
+  if(isAdmin)sheet.append(h("p",{class:"note"},h("b",null,"You're the admin. "),"Make someone else admin in Firebase first, so the map still has an admin."));
+  const pw=h("input",{type:"password",id:"del-pw",autocomplete:"current-password"});
+  const err=h("div",{class:"err",role:"alert"});
+  const label=h("span",null,"Delete my account");
+  const go=h("button",{class:"danger-solid",type:"button"},icon("trash",17),label);
+  go.onclick=async()=>{if(!pw.value){err.textContent="Enter your password to confirm.";pw.focus();return}go.disabled=true;err.textContent="";label.textContent="Deleting…";
+    try{await deleteAccount(pw.value)}catch(x){go.disabled=false;label.textContent="Delete my account";err.textContent=x&&["auth/invalid-credential","auth/wrong-password"].includes(x.code)?"Wrong password. Try again.":x&&x.code&&String(x.code).startsWith("auth/")?authError(x.code):"Couldn't delete everything. Check your connection and try again."}};
+  sheet.append(h("label",{for:"del-pw"},"Enter your password to confirm",pw),err,h("div",{class:"actions"},go,h("button",{type:"button",onclick:showMenu},"Cancel")));
+}
+async function deleteAccount(password){
+  const u=auth.currentUser;if(!u)return;
+  await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,password));
+  const b1=writeBatch(db);b1.delete(doc(db,"families",me));b1.delete(doc(db,"private",me));b1.delete(doc(db,"seen",me));await b1.commit();
+  const ids=new Set([...outReq.values(),...inReq.values()].map(r=>r.id));
+  if(ids.size){const b2=writeBatch(db);ids.forEach(id=>b2.delete(doc(db,"requests",id)));await b2.commit()}
+  await deleteUser(u);
+  try{await terminate(db);await clearIndexedDbPersistence(db)}catch(e){}
+  try{sessionStorage.clear()}catch(e){}
+  location.reload();
+}
+
+// ---------- post a message ----------
+function dayPills(name,selected){return h("div",{class:"pills",role:"radiogroup","aria-label":"How long to show it"},...DAYS.map(d=>h("label",{class:"pill"},h("input",{type:"radio",name,value:String(d),checked:d===selected}),h("span",null,`${d} day${d>1?"s":""}`))))}
+function showPostMessage(){
+  const f=families.get(me);if(!f){openForm(me);return}
+  openSheet("post");
+  const m=activeMsg(f);
+  sheet.append(head(m?"Your message":"Post a message","Everyone sees a red dot on your flag"));
+  const ta=h("textarea",{id:"pm-text",maxlength:240,rows:3,placeholder:"e.g. Bathukamma get-together on Saturday at Deutsches Eck, all welcome!"});ta.value=m?m.text:"";
+  const counter=h("span",{class:"counter"});const upd=()=>counter.textContent=`${ta.value.length}/240`;ta.oninput=upd;upd();
+  const err=h("div",{class:"err",role:"alert"});
+  const save=async(msg,b)=>{try{await updateDoc(doc(db,"families",me),{message:msg,updatedAt:now()});openFamily(me);toast(msg?"Message posted":"Message removed",true)}catch(x){if(b)b.disabled=false;err.textContent="Couldn't save. Check your connection and try again."}};
+  sheet.append(h("div",{class:"fform"},
+    h("label",{for:"pm-text"},"Your message",ta),counter,
+    h("div",{class:"glabel"},"Show the red dot for"),dayPills("pm-days",m?m.days:3),err,
+    h("div",{class:"actions"},
+      h("button",{class:"primary grow",type:"button",onclick:e=>{const b=e.currentTarget;const t=ta.value.trim();if(!t){err.textContent="Write a message first.";ta.focus();return}b.disabled=true;const days=+sheet.querySelector('input[name="pm-days"]:checked').value;const keep=m&&m.text===t&&m.days===days;const tm=now();save(keep?{text:m.text,days:m.days,postedAt:m.postedAt,expiresAt:m.expiresAt}:{text:t,days,postedAt:tm,expiresAt:tm+days*86400000},b)}},icon("send",17),m?"Update message":"Post message"),
+      m?h("button",{class:"danger",type:"button",onclick:e=>{const b=e.currentTarget;b.disabled=true;save(null,b)}},"Remove"):null,
+      h("button",{type:"button",onclick:()=>openFamily(me)},"Cancel"))));
+  setTimeout(()=>ta.focus({preventScroll:true}),350);
+}
 
 // ---------- family search ----------
 let qTimer=0;
-$("q").addEventListener("input",()=>{clearTimeout(qTimer);qTimer=setTimeout(runSearch,150)});
+$("q").addEventListener("input",()=>{clearTimeout(qTimer);qTimer=setTimeout(runSearch,180)});
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();runSearch()}});
 function runSearch(){
-  const raw=$("q").value.trim(),q=norm(raw);if(!q){if(sheet.dataset.mode==="search"){closeSheet();sheet.dataset.mode=""}return}
+  const raw=$("q").value.trim(),q=norm(raw);if(!q){if(sheet.dataset.mode==="search")closeSheet();return}
   const terms=q.split(" ");
   const hits=[...families.values()].filter(f=>{const a=visibleAddress(f);const hay=norm([f.name,f.profession,f.interests,f.about,(f.languages||[]).join(" "),a&&a.text].filter(Boolean).join(" "));return terms.every(t=>hay.includes(t))});
-  openSheet();openId=null;sheet.dataset.mode="search";
+  if(sheet.dataset.mode==="search"&&!sheet.hidden)rerenderSheet("search");else openSheet("search");
   sheet.append(head(hits.length?`${hits.length} famil${hits.length>1?"ies":"y"} found`:"No families found",`for "${raw}"`));
   const list=h("div",{class:"list"});
-  for(const f of hits)list.append(h("button",{type:"button",onclick:()=>{sheet.dataset.mode="";focusFamily(f);openFamily(f.id)}},h("b",null,f.name||"Family"),h("span",null,[f.profession,f.interests].filter(Boolean).join(" · ")||"No details yet")));
-  if(!hits.length)list.append(h("p",{class:"note"},"Try a shorter word, like a first name, a job or an interest."));
+  for(const f of hits)list.append(h("button",{class:"person",type:"button",onclick:()=>{focusFamily(f);openFamily(f.id)}},avatar(f.name,"sm"),h("span",{class:"tx"},h("b",null,f.name||"Family"),h("span",null,[f.profession,f.interests].filter(Boolean).join(" · ")||"No details yet")),icon("chev",18)));
+  if(!hits.length)list.append(h("p",{class:"empty-line"},"Try a shorter word, like a first name, a job or an interest."));
   sheet.append(list);
 }
 
 // ---------- placing the flag ----------
-let tempMarker=null,tempEl=null;
+let tempMarker=null;
 function setTemp(lat,lng,label){
   placing.pos=[lat,lng];if(label!==undefined)placing.addr=label;
   if(!tempMarker){
-    tempEl=document.createElement("div");tempEl.className="flag-icon";tempEl.innerHTML=flagHTML({name:placing.name},{temp:true});
-    tempMarker=new maplibregl.Marker({element:tempEl,anchor:"top-left",draggable:true}).setLngLat([lng,lat]).addTo(map);
+    const el=document.createElement("div");el.className="flag-icon new";el.innerHTML=flagHTML({name:placing.name},{temp:true});
+    tempMarker=new maplibregl.Marker({element:el,anchor:"top-left",draggable:true}).setLngLat([lng,lat]).addTo(map);
     tempMarker.on("dragend",()=>{const p=tempMarker.getLngLat();placing.pos=[p.lat,p.lng];placing.addr=null});
   }else tempMarker.setLngLat([lng,lat]);
   $("p-done").disabled=false;
 }
-map.on("click",e=>{if(placing)setTemp(e.lngLat.lat,e.lngLat.lng,null)});
-function startPlacing(id,name,pos,onDone){
+async function startPlacing(id,name,pos,onDone){
+  if(!map){toast("The map is still loading…");const m=await mapReady;if(!m){toast("The map couldn't load. Check your connection and reload.");return}}
   placing={id,name:name||"Your flag",pos:null,addr:null,onDone};
-  sheet.hidden=true;$("placebar").hidden=false;$("stage").classList.add("placing");
+  sheet.hidden=true;$("placebar").hidden=false;$("stage").classList.add("placing");refresh();
   $("p-addr").value="";$("p-sugg").textContent="";$("p-done").disabled=true;
   showHouseNumbers(true);redrawFlags();
   if(pos){setTemp(pos[0],pos[1]);goTo(pos[0],pos[1],Math.max(map.getZoom(),17))}
 }
 function endPlacing(ok){
-  const p=placing;placing=null;if(tempMarker){tempMarker.remove();tempMarker=null;tempEl=null}
-  $("placebar").hidden=true;$("stage").classList.remove("placing");sheet.hidden=false;showHouseNumbers(false);redrawFlags();
+  const p=placing;placing=null;if(tempMarker){tempMarker.remove();tempMarker=null}
+  $("placebar").hidden=true;$("stage").classList.remove("placing");sheet.hidden=false;showHouseNumbers(false);refresh();
   if(ok&&p&&p.pos)p.onDone(p.pos,p.addr);
 }
 $("p-done").onclick=()=>endPlacing(true);
@@ -679,76 +1020,72 @@ async function addrSearch(){
     if(!res.length){box.append(h("span",{class:"placed"},"No match. Check the spelling, or tap your house on the map."));return}
     for(const x of res){const a=x.address||{};
       const label=[[a.road||a.pedestrian||a.footway,a.house_number].filter(Boolean).join(" "),[a.postcode,a.city||a.town||a.village||a.suburb].filter(Boolean).join(" ")].filter(Boolean).join(", ")||x.display_name.split(",").slice(0,3).join(",");
-      box.append(h("button",{type:"button",onclick:()=>{setTemp(+x.lat,+x.lon,label);goTo(+x.lat,+x.lon,18);box.textContent="";$("p-addr").value=label}},label))}
-  }catch(e){box.textContent="";box.append(h("span",{class:"placed"},"Address search is not available right now. Tap your house on the map instead."))}
+      box.append(h("button",{type:"button",onclick:()=>{setTemp(+x.lat,+x.lon,label);goTo(+x.lat,+x.lon,18);box.textContent="";$("p-addr").value=label}},icon("pin",16),label))}
+  }catch(e){box.textContent="";box.append(h("span",{class:"placed"},"Address search isn't available right now. Tap your house on the map instead."))}
 }
 $("p-loc").onclick=()=>{
   if(!navigator.geolocation){toast("Location isn't available on this device.");return}
   $("p-loc").disabled=true;
-  navigator.geolocation.getCurrentPosition(p=>{$("p-loc").disabled=false;setTemp(p.coords.latitude,p.coords.longitude,null);goTo(p.coords.latitude,p.coords.longitude,18);toast("Check the flag sits on your house, then tap Done.")},
+  navigator.geolocation.getCurrentPosition(p=>{$("p-loc").disabled=false;setTemp(p.coords.latitude,p.coords.longitude,null);goTo(p.coords.latitude,p.coords.longitude,18);toast("Check the flag is on your house, then tap Done.")},
     ()=>{$("p-loc").disabled=false;toast("Couldn't get your location. Search your address instead.")},{enableHighAccuracy:true,timeout:12000});
 };
 
-// ---------- form ----------
+// ---------- add / edit family ----------
 async function openForm(id){
   if(!id)return;const f=families.get(id)||{},editingOther=id!==me;
   let priv=privates.get(id)||null;
   if(!priv&&families.has(id)){try{const s=await getDoc(doc(db,"private",id));if(s.exists())priv=s.data()}catch(e){}}
-  openSheet();openId=null;sheet.dataset.mode="";
+  openSheet("form");
   sheet.append(head(editingOther?"Edit family (admin)":families.has(id)?"Edit my family":"Add my family",editingOther?null:"Only you and the admin can change this"));
   const v=x=>x==null?"":String(x);
-  const inp=(idn,label,val,o={},opt=true)=>{const i=h(o.tag||"input",Object.assign({id:idn},o.tag?{}:{type:o.type||"text"},o.extra||{}));i.value=val;return h("label",{for:idn},h("span",null,label,opt?h("span",{class:"opt"}," (optional)"):null),i)};
+  const inp=(idn,label,val,o={},opt)=>{const i=h(o.tag||"input",Object.assign({id:idn},o.tag?{}:{type:o.type||"text"},o.extra||{}));i.value=val;return h("label",{for:idn},h("span",null,label,opt?h("span",{class:"opt"}," (optional)"):null),i)};
   let pos=priv&&typeof priv.lat==="number"?[priv.lat,priv.lng]:(typeof f.lat==="number"&&!f.approx?[f.lat,f.lng]:null);
   const fullAddr=priv?priv.address:(f.address||""), fullContact=priv?priv.contact:(f.contact||"");
   const locPublic=f.v===2?!f.approx:true, contactPublic=f.v===2?!!f.contactPublic:false;
   const err=h("div",{class:"err",role:"alert"});
   const placedTxt=h("span",{class:"placed"}),placeBtn=h("button",{type:"button"});
-  const sync=()=>{placedTxt.textContent=pos?"✓ Flag placed":"Not placed yet";placedTxt.className="placed"+(pos?" yes":"");placeBtn.textContent=pos?"Move my flag":"Place my flag on the map";placeBtn.className=pos?"":"primary"};
+  const sync=()=>{placedTxt.replaceChildren(pos?icon("check",16):"",pos?"Flag placed":"Not placed yet");placedTxt.className="placed"+(pos?" yes":"");placeBtn.replaceChildren(icon(pos?"pin":"flag",17),pos?"Move my flag":"Place my flag on the map");placeBtn.className=pos?"":"primary"};
   placeBtn.onclick=()=>startPlacing(id,$("f-name").value.trim()||f.name,pos,(p,addr)=>{pos=p;sync();err.textContent="";const a=$("f-addr");if(addr&&!a.value.trim()){a.value=addr;updPreview()}});
   sync();
-  const radio=(name,val,checked,label,hint)=>h("label",null,h("input",{type:"radio",name,value:val,checked}),h("span",null,label,hint?h("span",{class:"hint"},hint):null));
-  const preview=h("span",{class:"hint"});
-  const updPreview=()=>{const a=$("f-addr").value.trim();preview.textContent=a?`Others will see: "${partialAddress(a)}" and your flag about 50 m away.`:"Others will see your flag about 50 m away."};
-  const langs=h("div",{class:"langs"});
-  for(const l of LANGS){const c=h("input",{type:"checkbox",id:"lang-"+l,value:l});c.checked=(f.languages||[]).includes(l);langs.append(h("label",{for:"lang-"+l},c,l))}
+  const preview=h("small");
+  const updPreview=()=>{const a=$("f-addr").value.trim();preview.textContent=a?`Others see "${partialAddress(a)}" and your flag about 50 m away.`:"Others see your flag about 50 m away."};
+  const choice=(name,val,checked,ic,title,sub)=>h("label",{class:"choice-card"},h("input",{type:"radio",name,value:val,checked}),h("span",{class:"ic"},icon(ic,19)),h("span",{class:"tx"},h("b",null,title),typeof sub==="string"?h("small",null,sub):sub));
+  const step=(n,title,tag,...kids)=>h("section",{class:"step"},h("div",{class:"step-h"},h("span",{class:"step-n"},String(n)),h("b",null,title),tag?h("span",{class:"tag"},tag):null),...kids);
+  const langs=h("div",{class:"pills",role:"group","aria-label":"Languages"},...LANGS.map(l=>h("label",{class:"pill"},h("input",{type:"checkbox",name:"lang",value:l,checked:(f.languages||[]).includes(l)}),h("span",null,l))));
   const m=activeMsg(f);
-  const daySel=h("select",{id:"f-days"});for(const d of DAYS){const o=h("option",{value:d},`${d} day${d>1?"s":""}`);if((m?m.days:3)===d)o.selected=true;daySel.append(o)}
-  const locChoice=h("div",{class:"choice",role:"radiogroup","aria-label":"Who can see your exact location and address"},
-    radio("loc","public",locPublic,"Everyone"),
-    h("label",null,h("input",{type:"radio",name:"loc",value:"private",checked:!locPublic}),h("span",null,"Only families I've connected with",preview)));
-  const contactChoice=h("div",{class:"choice",role:"radiogroup","aria-label":"Who can see your contact"},
-    radio("contact","public",contactPublic,"Everyone"),
-    radio("contact","private",!contactPublic,"Only families I've connected with"));
-  const form=h("form",{novalidate:true},
-    h("fieldset",null,h("legend",null,"Your flag"),
-      inp("f-name","Family or display name",v(f.name),{extra:{maxlength:40,placeholder:"e.g. Rao family"}},false),
-      h("div",{class:"inline"},placeBtn,placedTxt),
-      inp("f-addr","Address",v(fullAddr),{extra:{maxlength:120,placeholder:"e.g. Löhrstraße 12, 56068 Koblenz"}})),
-    h("fieldset",null,h("legend",null,"Who can see what"),
-      h("div",null,h("div",{style:"font-size:13px;color:var(--muted);margin-bottom:6px"},"Exact location and full address"),locChoice),
-      inp("f-contact","Contact (phone, WhatsApp or email)",v(fullContact),{extra:{maxlength:80}}),
-      h("div",null,h("div",{style:"font-size:13px;color:var(--muted);margin-bottom:6px"},"Contact"),contactChoice)),
-    h("fieldset",null,h("legend",null,"About you"),
+  const msgTa=h("textarea",{id:"f-msg",maxlength:240,rows:2,placeholder:"e.g. Bathukamma get-together on Saturday, all welcome!"});msgTa.value=m?m.text:"";
+  const form=h("form",{novalidate:true,class:"fform"},
+    step(1,"Your flag","Needed",
+      inp("f-name","Family or display name",v(f.name),{extra:{maxlength:40,placeholder:"e.g. Rao family",autocomplete:"off"}}),
+      h("div",{class:"place"},placeBtn,placedTxt),
+      inp("f-addr","Address",v(fullAddr),{extra:{maxlength:120,placeholder:"e.g. Löhrstraße 12, 56068 Koblenz",autocomplete:"street-address"}},true)),
+    step(2,"Who can see what",null,
+      h("div",{class:"glabel"},"Your exact location and full address"),
+      h("div",{class:"choices",role:"radiogroup"},choice("loc","public",locPublic,"globe","Everyone on the map","Your flag sits on your home"),choice("loc","private",!locPublic,"lock","Only connected families",preview)),
+      inp("f-contact","Contact (phone, WhatsApp or email)",v(fullContact),{extra:{maxlength:80}},true),
+      h("div",{class:"glabel"},"Your contact"),
+      h("div",{class:"choices",role:"radiogroup"},choice("contact","public",contactPublic,"globe","Everyone on the map","Anyone logged in can see it"),choice("contact","private",!contactPublic,"lock","Only connected families","Recommended"))),
+    step(3,"About you","Optional",
       inp("f-prof","What you do",v(f.profession),{extra:{maxlength:80,placeholder:"e.g. IT, student, doctor"}}),
       inp("f-int","Interests",v(f.interests),{extra:{maxlength:120,placeholder:"e.g. cricket, cooking, festivals"}}),
       h("div",{class:"row2"},inp("f-mem","Family members",v(f.members),{type:"number",extra:{min:1,max:20,inputmode:"numeric"}}),inp("f-kids","Kids",v(f.kids),{type:"number",extra:{min:0,max:15,inputmode:"numeric"}})),
-      h("div",null,h("div",{style:"font-size:13px;color:var(--muted);margin-bottom:6px"},"Languages ",h("span",{class:"opt"},"(optional)")),langs),
-      inp("f-about","About us",v(f.about),{tag:"textarea",extra:{maxlength:200,rows:2}})),
-    h("fieldset",null,h("legend",null,"Message to the community"),
-      inp("f-msg","Message",m?m.text:"",{tag:"textarea",extra:{maxlength:240,rows:2,placeholder:"e.g. Bathukamma get-together on Saturday, all welcome!"}}),
-      h("label",{for:"f-days"},h("span",null,"Show the red dot for"),daySel)),
+      h("div",{class:"glabel"},"Languages"),langs,
+      inp("f-about","About us",v(f.about),{tag:"textarea",extra:{maxlength:200,rows:2,placeholder:"A line or two about your family"}})),
+    step(4,"Message to the community","Optional",
+      h("label",{for:"f-msg"},"Message",msgTa),
+      h("div",{class:"glabel"},"Show the red dot for"),dayPills("f-days",m?m.days:3)),
     err,
-    h("div",{class:"actions"},h("button",{class:"primary",type:"submit"},"Save"),h("button",{type:"button",onclick:()=>families.has(id)?openFamily(id):closeSheet()},"Cancel"),
-      families.has(id)&&!editingOther?h("button",{class:"danger",type:"button",onclick:()=>confirmRemove(id)},"Delete my flag"):null));
+    families.has(id)&&!editingOther?h("button",{class:"linkdanger",type:"button",onclick:()=>confirmRemove(id)},icon("trash",16),"Delete my flag"):null,
+    h("div",{class:"formbar"},h("button",{class:"primary",type:"submit"},icon("check",18),"Save"),h("button",{type:"button",onclick:()=>families.has(id)?openFamily(id):closeSheet()},"Cancel")));
   sheet.append(form);
   $("f-addr").addEventListener("input",updPreview);updPreview();
   form.onsubmit=async e=>{
     e.preventDefault();
     const name=$("f-name").value.trim();
-    if(!name){err.textContent="Add a family or display name.";$("f-name").focus();return}
-    if(!pos){err.textContent="Place your flag on the map first.";placeBtn.focus();return}
+    if(!name){err.textContent="Add a family or display name (step 1).";$("f-name").focus();return}
+    if(!pos){err.textContent="Place your flag on the map first (step 1).";placeBtn.focus();placeBtn.scrollIntoView({behavior:"smooth",block:"center"});return}
     const num=(x,max)=>{const n=parseInt(x,10);return Number.isFinite(n)&&n>=0&&n<=max?n:null};
-    const msgText=$("f-msg").value.trim(),days=parseInt(daySel.value,10)||3;
+    const msgText=msgTa.value.trim(),days=+form.querySelector('input[name="f-days"]:checked').value||3;
     let message=null;
     if(msgText){if(m&&m.text===msgText&&m.days===days)message={text:m.text,days:m.days,postedAt:m.postedAt,expiresAt:m.expiresAt};else{const t=now();message={text:msgText,days,postedAt:t,expiresAt:t+days*86400000}}}
     const lp=form.querySelector('input[name="loc"]:checked').value==="public";
@@ -761,13 +1098,13 @@ async function openForm(id){
       street:partialAddress(address),address:lp?address:"",contact:cp?contact:"",
       profession:$("f-prof").value.trim(),interests:$("f-int").value.trim(),
       members:num($("f-mem").value,20),kids:num($("f-kids").value,15),
-      languages:[...langs.querySelectorAll("input:checked")].map(c=>c.value),
+      languages:[...form.querySelectorAll('input[name="lang"]:checked')].map(c=>c.value),
       about:$("f-about").value.trim(),message,updatedAt:now(),v:2};
     const prv={lat,lng,address,contact,dLat,dLng};
     const btn=form.querySelector("button[type=submit]");btn.disabled=true;err.textContent="";
     try{
       const b=writeBatch(db);b.set(doc(db,"private",id),prv);b.set(doc(db,"families",id),pub);await b.commit();
-      families.set(id,{id,...pub});privates.set(id,prv);refresh();openFamily(id);toast("Saved");
+      families.set(id,{id,...pub});privates.set(id,prv);refresh();focusFamily(families.get(id));openFamily(id);toast("Saved",true);
     }catch(x){btn.disabled=false;err.textContent=x&&x.code==="permission-denied"?"You can't save this flag. Check that you're logged in to your own account.":"Couldn't save. Check your connection and try again."}
   };
 }
@@ -782,13 +1119,13 @@ function maybeWelcome(user){
   w.onclick=e=>{if(e.target===w)close()};
   const mine=families.get(me);
   const others=[...families.values()].filter(f=>f.id!==me);
-  const unread=[...families.values()].filter(f=>{const m=activeMsg(f);return m&&f.id!==me&&seen[f.id]!==m.postedAt}).sort((a,b)=>b.message.postedAt-a.message.postedAt);
-  const pend=[...inReq.values()].filter(r=>r.status==="pending");
+  const unread=others.filter(f=>{const m=activeMsg(f);return m&&seen[f.id]!==m.postedAt}).sort((a,b)=>b.message.postedAt-a.message.postedAt);
+  const pend=pendingCount();
   const famCount=families.size;
   const stats=h("div",{class:"stats"},
     h("div",{class:"stat"},h("b",null,String(famCount)),h("span",null,famCount===1?"family on the map":"families on the map")),
     h("div",{class:"stat"+(unread.length?" hot":"")},h("b",null,String(unread.length)),h("span",null,unread.length===1?"new message":"new messages")));
-  const card=h("div",{class:"card",role:"dialog","aria-modal":"true","aria-labelledby":"w-title"});
+  const card=h("div",{class:"card",role:"dialog","aria-modal":"true","aria-labelledby":"w-title",tabindex:"-1"});
   if(!mine){
     card.append(
       h("p",{class:"hello"},"నమస్కారం!"),
@@ -796,34 +1133,25 @@ function maybeWelcome(user){
       h("p",null,others.length?`${others.length} Telugu ${others.length===1?"family is":"families are"} already here. Add yours so neighbours can find you.`:"You're one of the first here. Add your family and invite others from the WhatsApp group."),
       stats,
       h("ol",{class:"steps"},
-        h("li",null,"Add your family name and, if you like, what you do and your interests."),
-        h("li",null,"Put your flag on your home. You choose who sees your exact address and contact."),
+        h("li",null,"Add your family and put your flag on your home."),
+        h("li",null,"Choose who sees your exact address and contact."),
         h("li",null,"Connect with families near you, and post a message to say hello.")),
       h("div",{class:"actions"},
-        h("button",{class:"primary",type:"button",onclick:()=>{close();openForm(me)}},"Add my family"),
-        h("button",{type:"button",onclick:close},"Explore the map first")),
-      h("p",{style:"margin:12px 0 0;font-size:12.5px"},"Signed in as ",h("b",null,user.email||"")));
+        h("button",{class:"primary",type:"button",onclick:()=>{close();openForm(me)}},icon("plus",18),"Add my family"),
+        h("button",{type:"button",onclick:close},"Look around first")));
   }else{
     card.append(
       h("p",{class:"hello"},"నమస్కారం!"),
       h("h2",{id:"w-title"},`Welcome back, ${mine.name||"friend"}`),
-      h("p",null,unread.length||pend.length?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
+      h("p",null,unread.length||pend?"Here's what's new since you last looked.":"All caught up. Have a look at who's around you."),
       stats);
-    if(pend.length)card.append(h("p",{class:"note",style:"margin:0 0 10px"},h("b",null,`${pend.length} connection request${pend.length>1?"s":""}`)," waiting for your reply."));
-    if(unread.length){
-      const ul=h("ul",{class:"news"});
-      for(const f of unread.slice(0,3))ul.append(h("li",null,h("b",null,f.name||"Family"),": ",f.message.text.length>70?f.message.text.slice(0,70)+"…":f.message.text));
-      card.append(ul);
-    }
-    if(!activeMsg(mine)&&!pend.length)card.append(h("p",{class:"note",style:"margin:0 0 4px"},"Tip: post a message on your flag to invite people to an event or ask a question."));
-    const first=pend.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showConnections()}},pend.length===1?"See the request":"See the requests")
-      :unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();$("msgsBtn").click()}},unread.length===1?"Read the message":"Read the messages"):null;
-    card.append(h("div",{class:"actions"},first,
-      h("button",{class:first?null:"primary",type:"button",onclick:()=>{close();focusFamily(mine)}},"Show my flag"),
-      h("button",{type:"button",onclick:close},"Explore the map")));
+    if(pend)card.append(h("p",{class:"note",style:"margin:0 0 10px"},h("b",null,`${pend} connection request${pend>1?"s":""}`)," waiting for your reply."));
+    if(unread.length){const ul=h("ul",{class:"news"});for(const f of unread.slice(0,3))ul.append(h("li",null,h("b",null,f.name||"Family"),": ",f.message.text.length>70?f.message.text.slice(0,70)+"…":f.message.text));card.append(ul)}
+    const first=pend||unread.length?h("button",{class:"primary",type:"button",onclick:()=>{close();showActivity()}},pend?"See requests":"Read messages"):null;
+    card.append(h("div",{class:"actions"},first,h("button",{class:first?null:"primary",type:"button",onclick:()=>{close();focusFamily(mine)}},"Show my flag"),h("button",{type:"button",onclick:close},"Explore")));
   }
   w.append(card);
-  setTimeout(()=>{const b=card.querySelector("button");if(b)b.focus()},60);
+  setTimeout(()=>card.focus({preventScroll:true}),60);
   w.onkeydown=e=>{if(e.key==="Escape")close()};
 }
 </script>
