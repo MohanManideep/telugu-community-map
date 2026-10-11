@@ -8,6 +8,55 @@ service cloud.firestore {
     function isAdmin() {
       return isOwner() || (signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
+
+    // ---------- family membership ----------
+    // memberships/{uid} says which family a person belongs to ("" = none).
+    // Accounts from before family members existed have no such document:
+    // their family is the flag with their own user id.
+    function memPath() { return /databases/$(database)/documents/memberships/$(request.auth.uid); }
+    function famPath(f) { return /databases/$(database)/documents/families/$(f); }
+    function isMember(f) {
+      return signedIn() && f is string && f != ''
+        && ((exists(memPath()) && get(memPath()).data.fam == f)
+            || (!exists(memPath()) && f == request.auth.uid));
+    }
+    // The same, after this write (joining or creating a family in one step).
+    function isMemberAfter(f) {
+      return signedIn() && f is string && f != ''
+        && ((existsAfter(memPath()) && getAfter(memPath()).data.fam == f)
+            || (!existsAfter(memPath()) && f == request.auth.uid));
+    }
+    // The family's member list includes me after this write.
+    function addsMe(f) {
+      return existsAfter(famPath(f)) && request.auth.uid in getAfter(famPath(f)).data.get('people', {});
+    }
+    // A brand-new flag, with me as its only member. Its id is my user id, or "f_" plus random letters.
+    function newFamily(f) {
+      return (f == request.auth.uid || f.matches('f_[A-Za-z0-9]{16,40}'))
+        && !exists(famPath(f)) && addsMe(f)
+        && getAfter(famPath(f)).data.people.keys().hasOnly([request.auth.uid]);
+    }
+    function invPath(t) { return /databases/$(database)/documents/invites/$(t); }
+    // Joining with an invite link: it must be valid, and it is used up in the same step.
+    function viaInvite(d) {
+      return 'via' in d && d.via is string && d.via.size() >= 16
+        && exists(invPath(d.via))
+        && get(invPath(d.via)).data.fam == d.fam
+        && get(invPath(d.via)).data.expiresAt > request.time.toMillis()
+        && !existsAfter(invPath(d.via))
+        && addsMe(d.fam);
+    }
+    function joinPath() { return /databases/$(database)/documents/joins/$(request.auth.uid); }
+    // Joining after the family accepted my request.
+    function viaJoin(f) {
+      return exists(joinPath())
+        && get(joinPath()).data.fam == f
+        && get(joinPath()).data.status == 'approved'
+        && !existsAfter(joinPath())
+        && addsMe(f);
+    }
+
+    // ---------- checks for stored data ----------
     function optStr(d, k, max) {
       return !(k in d) || (d[k] is string && d[k].size() <= max);
     }
@@ -28,7 +77,7 @@ service cloud.firestore {
       return d.keys().hasOnly(['name', 'lat', 'lng', 'address', 'profession', 'interests',
                                'members', 'kids', 'languages', 'about', 'contact',
                                'message', 'updatedAt', 'street', 'approx',
-                               'locPublic', 'contactPublic', 'v'])
+                               'locPublic', 'contactPublic', 'v', 'people'])
         && d.name is string && d.name.size() > 0 && d.name.size() <= 40
         && d.lat is number && d.lng is number
         && d.lat > 47 && d.lat < 55.5 && d.lng > 5.5 && d.lng < 15.5
@@ -41,6 +90,8 @@ service cloud.firestore {
         && (!('approx' in d) || d.approx is bool)
         && (!('locPublic' in d) || d.locPublic is bool)
         && (!('contactPublic' in d) || d.contactPublic is bool)
+        // Members of the family and their first names, at most 6.
+        && (!('people' in d) || (d.people is map && d.people.size() <= 6))
         // Never put hidden details into the public part.
         && (d.get('locPublic', true) == true || d.get('address', '') == '')
         && (d.get('contactPublic', true) == true || d.get('contact', '') == '')
@@ -57,66 +108,130 @@ service cloud.firestore {
     function accepted(path) {
       return exists(path) && get(path).data.status == 'accepted';
     }
+    function connected(a, b) {
+      return accepted(/databases/$(database)/documents/requests/$(a + '_' + b))
+          || accepted(/databases/$(database)/documents/requests/$(b + '_' + a));
+    }
+    // My family is connected with this family.
     function connectedTo(owner) {
-      return accepted(/databases/$(database)/documents/requests/$(request.auth.uid + '_' + owner))
-          || accepted(/databases/$(database)/documents/requests/$(owner + '_' + request.auth.uid));
+      return (exists(memPath()) && get(memPath()).data.fam != '' && connected(get(memPath()).data.fam, owner))
+          || (!exists(memPath()) && connected(request.auth.uid, owner));
     }
 
-    // One flag per account: the document id is the member's user id.
-    match /families/{uid} {
+    // ---------- families ----------
+    // Everyone in a family can change its flag.
+    match /families/{fid} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
-        && (request.auth.uid == uid || isAdmin())
-        && validFamily(request.resource.data);
-      allow delete: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if (isMemberAfter(fid) || isAdmin()) && validFamily(request.resource.data);
+      allow update: if (isMember(fid) || isMemberAfter(fid) || isAdmin()) && validFamily(request.resource.data);
+      allow delete: if isMember(fid) || isAdmin();
     }
 
-    // Only the family itself, connected families and the admin can read this.
-    match /private/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isAdmin() || connectedTo(uid));
-      allow create, update: if signedIn()
-        && (request.auth.uid == uid || isAdmin())
+    // Only the family itself, connected families and the admins can read this.
+    match /private/{fid} {
+      allow read: if isMember(fid) || isAdmin() || connectedTo(fid);
+      allow create, update: if (isMember(fid) || isMemberAfter(fid) || isAdmin())
         && validPrivate(request.resource.data);
-      allow delete: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isMember(fid) || isAdmin();
     }
 
-    // Connection requests. Document id is "<from>_<to>".
+    // Which family each person belongs to.
+    match /memberships/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly(['fam', 'at', 'via'])
+        && request.resource.data.fam is string
+        && request.resource.data.at is number
+        && ((isAdmin() && request.resource.data.fam == '')
+          || (request.auth.uid == uid
+              && (request.resource.data.fam == ''
+                  || newFamily(request.resource.data.fam)
+                  || viaInvite(request.resource.data)
+                  || viaJoin(request.resource.data.fam))));
+      allow delete: if signedIn()
+        && ((request.auth.uid == uid && !exists(famPath(uid))) || isAdmin());
+    }
+
+    // Invite links. The secret part of the link is the document id, so nobody can list them.
+    match /invites/{token} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && token.size() >= 16
+        && request.resource.data.keys().hasOnly(['fam', 'famName', 'by', 'byName', 'createdAt', 'expiresAt'])
+        && isMember(request.resource.data.fam)
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.famName is string && request.resource.data.famName.size() <= 40
+        && request.resource.data.byName is string && request.resource.data.byName.size() <= 30
+        && request.resource.data.createdAt is number
+        && request.resource.data.expiresAt is number
+        && request.resource.data.expiresAt <= request.time.toMillis() + 8 * 86400000;
+      allow update: if false;
+      allow delete: if signedIn()
+        && (isMember(resource.data.fam) || isMemberAfter(resource.data.fam) || isAdmin());
+    }
+
+    // Asking to join a family. Document id is the person asking.
+    match /joins/{uid} {
+      allow read: if signedIn()
+        && (request.auth.uid == uid || isMember(resource.data.fam) || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['fam', 'famName', 'name', 'fromName', 'status', 'createdAt'])
+        && request.resource.data.fam is string
+        && exists(famPath(request.resource.data.fam))
+        && !isMember(request.resource.data.fam)
+        && request.resource.data.famName is string && request.resource.data.famName.size() <= 40
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 30
+        && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 40
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt is number;
+      // Someone in that family answers, once.
+      allow update: if signedIn()
+        && isMember(resource.data.fam)
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt'])
+        && request.resource.data.status in ['approved', 'declined'];
+      allow delete: if signedIn()
+        && (request.auth.uid == uid || isMember(resource.data.fam) || isAdmin());
+    }
+
+    // ---------- connections between families ----------
+    // Document id is "<from family>_<to family>".
     match /requests/{rid} {
       allow read: if signedIn()
-        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid || isAdmin());
+        && (isMember(resource.data.from) || isMember(resource.data.to) || isAdmin());
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['from', 'to', 'note', 'fromName', 'status', 'createdAt'])
-        && request.resource.data.from == request.auth.uid
+        && request.resource.data.from is string
+        && isMember(request.resource.data.from)
         && request.resource.data.to is string
-        && request.resource.data.to != request.auth.uid
-        && rid == request.auth.uid + '_' + request.resource.data.to
+        && request.resource.data.to != request.resource.data.from
+        && rid == request.resource.data.from + '_' + request.resource.data.to
         && request.resource.data.status == 'pending'
         && request.resource.data.note is string && request.resource.data.note.size() <= 200
         && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 40
         && request.resource.data.createdAt is number
-        && exists(/databases/$(database)/documents/families/$(request.auth.uid));
-      // Only the receiver answers, once.
+        && exists(famPath(request.resource.data.from));
+      // Only the receiving family answers, once.
       allow update: if signedIn()
-        && resource.data.to == request.auth.uid
+        && isMember(resource.data.to)
         && resource.data.status == 'pending'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt'])
         && request.resource.data.status in ['accepted', 'declined'];
       // Sender can cancel or remove a connection (but not erase a decline to ask again,
-      // unless they are deleting their account and their flag is already gone);
-      // receiver can remove a connection or clear a decline.
+      // unless their flag is already gone); receiver can remove a connection or clear a decline.
       allow delete: if signedIn() && (
-        (resource.data.from == request.auth.uid
-          && (resource.data.status != 'declined'
-              || !exists(/databases/$(database)/documents/families/$(request.auth.uid))))
-        || resource.data.to == request.auth.uid
+        (isMember(resource.data.from)
+          && (resource.data.status != 'declined' || !exists(famPath(resource.data.from))))
+        || isMember(resource.data.to)
         || isAdmin());
     }
 
-    // Community posts: messages and events.
+    // ---------- community posts: messages and events ----------
     function validPost(d) {
       return d.keys().hasOnly(['from', 'fromName', 'text', 'createdAt', 'expiresAt', 'isEvent', 'when', 'place', 'lat', 'lng', 'going', 'asAdmin'])
         // Only admins can post as "Community admin".
         && (!('asAdmin' in d) || d.asAdmin == false || (d.asAdmin == true && isAdmin()))
+        && d.from is string
         && d.fromName is string && d.fromName.size() <= 40
         && d.text is string && d.text.size() > 0 && d.text.size() <= 400
         && d.createdAt is number && d.expiresAt is number
@@ -131,52 +246,64 @@ service cloud.firestore {
         && (d.lat == null || (d.lat is number && d.lng is number
               && d.lat > 47 && d.lat < 55.5 && d.lng > 5.5 && d.lng < 15.5));
     }
-    function goingDoc(pid) {
-      return /databases/$(database)/documents/posts/$(pid)/going/$(request.auth.uid);
+    function postPath(pid) { return /databases/$(database)/documents/posts/$(pid); }
+    function goingPath(pid, f) { return /databases/$(database)/documents/posts/$(pid)/going/$(f); }
+    function goingStep(pid, f) {
+      return (request.resource.data.going == resource.data.going + 1
+                && !exists(goingPath(pid, f)) && existsAfter(goingPath(pid, f)))
+          || (request.resource.data.going == resource.data.going - 1
+                && exists(goingPath(pid, f)) && !existsAfter(goingPath(pid, f)));
+    }
+    // "I'm going" counts once per family (or per person without a family).
+    function myGoingStep(pid) {
+      return (exists(memPath()) && get(memPath()).data.fam != '' && goingStep(pid, get(memPath()).data.fam))
+          || goingStep(pid, request.auth.uid);
     }
     match /posts/{pid} {
       allow read: if signedIn();
+      // A family posts as itself; an admin can also post as "Community admin", even without a family.
       allow create: if signedIn()
-        && request.resource.data.from == request.auth.uid
         && request.resource.data.going == 0
         && validPost(request.resource.data)
-        // Families on the map can post; admins can post without a family.
-        && (exists(/databases/$(database)/documents/families/$(request.auth.uid)) || isAdmin());
+        && ((request.resource.data.get('asAdmin', false) == true && isAdmin()
+              && request.resource.data.from == request.auth.uid)
+          || (request.resource.data.get('asAdmin', false) != true
+              && isMember(request.resource.data.from)
+              && exists(famPath(request.resource.data.from))));
       allow update: if signedIn() && (
-        // The author edits their own post; the "going" count stays as it is.
-        (resource.data.from == request.auth.uid
+        // The author edits their post; the "going" count stays as it is.
+        ((isMember(resource.data.from) || resource.data.from == request.auth.uid)
           && request.resource.data.from == resource.data.from
           && request.resource.data.going == resource.data.going
           && validPost(request.resource.data))
         // Anyone taps "I'm going" or undoes it: the count moves by exactly 1, together with their own entry.
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going'])
-          && ((request.resource.data.going == resource.data.going + 1
-                && !exists(goingDoc(pid)) && existsAfter(goingDoc(pid)))
-            || (request.resource.data.going == resource.data.going - 1
-                && exists(goingDoc(pid)) && !existsAfter(goingDoc(pid))))));
-      allow delete: if signedIn() && (resource.data.from == request.auth.uid || isAdmin());
+          && myGoingStep(pid)));
+      allow delete: if signedIn()
+        && (isMember(resource.data.from) || resource.data.from == request.auth.uid || isAdmin());
 
-      // Who is going: only that family, the organiser and the admin can see an entry.
-      match /going/{uid} {
-        allow read: if signedIn() && (request.auth.uid == uid
-          || get(/databases/$(database)/documents/posts/$(pid)).data.from == request.auth.uid
+      // Who is going: only that family, the organiser and the admins can see an entry.
+      match /going/{gid} {
+        allow read: if signedIn() && (isMember(gid) || gid == request.auth.uid
+          || isMember(get(postPath(pid)).data.from)
+          || get(postPath(pid)).data.from == request.auth.uid
           || isAdmin());
-        allow create: if signedIn() && request.auth.uid == uid
+        allow create: if signedIn() && (isMember(gid) || gid == request.auth.uid)
           && request.resource.data.keys().hasOnly(['name', 'at'])
           && request.resource.data.name is string && request.resource.data.name.size() <= 40
           && request.resource.data.at is number
-          && getAfter(/databases/$(database)/documents/posts/$(pid)).data.going
-             == get(/databases/$(database)/documents/posts/$(pid)).data.going + 1;
+          && getAfter(postPath(pid)).data.going == get(postPath(pid)).data.going + 1;
         allow delete: if signedIn() && (
-          (request.auth.uid == uid
-            && getAfter(/databases/$(database)/documents/posts/$(pid)).data.going
-               == get(/databases/$(database)/documents/posts/$(pid)).data.going - 1)
-          || get(/databases/$(database)/documents/posts/$(pid)).data.from == request.auth.uid
+          ((isMember(gid) || gid == request.auth.uid)
+            && getAfter(postPath(pid)).data.going == get(postPath(pid)).data.going - 1)
+          || isMember(get(postPath(pid)).data.from)
+          || get(postPath(pid)).data.from == request.auth.uid
           || isAdmin());
       }
     }
 
-    // Suggestions to the admin: members write their own, only the admin (and the writer) can read.
+    // ---------- suggestions to the admins ----------
+    // Members write their own; only the admins (and the writer) can read them.
     match /suggestions/{sid} {
       allow read: if signedIn() && (resource.data.from == request.auth.uid || isAdmin());
       allow create: if signedIn()
@@ -194,13 +321,14 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && resource.data.from == request.auth.uid);
     }
 
-    // Which messages each member has already read (private to them).
+    // Which posts each person has already read (private to them).
     match /seen/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }
 
-    // Admins: everyone logged in can see who they are.
-    // Only the owner can give or remove admin access, and never to or from themselves.
+    // ---------- admins ----------
+    // Everyone logged in can see who they are. Only the owner gives admin access, never to themselves.
+    // The owner can take it away, and an admin can give it up (for example when deleting their account).
     match /admins/{uid} {
       allow read: if signedIn();
       allow create: if isOwner() && uid != request.auth.uid
@@ -208,8 +336,8 @@ service cloud.firestore {
         && request.resource.data.role == 'admin'
         && request.resource.data.name is string && request.resource.data.name.size() <= 60
         && request.resource.data.addedAt is number
-        && exists(/databases/$(database)/documents/families/$(uid));
-      allow delete: if isOwner() && uid != request.auth.uid;
+        && (exists(famPath(uid)) || exists(/databases/$(database)/documents/memberships/$(uid)));
+      allow delete: if signedIn() && (isOwner() || request.auth.uid == uid);
       allow update: if false;
     }
   }

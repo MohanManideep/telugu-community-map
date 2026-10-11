@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Koblenz Telugu Families</title>
 <meta name="description" content="Private community map for Telugu families in Koblenz and nearby towns.">
-<meta name="app-version" content="2026-10-11.8">
+<meta name="app-version" content="2026-10-11.9">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2428" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -202,6 +202,11 @@ body.loggedout #sheet{z-index:1600}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .note{font-size:13.5px;color:var(--muted);background:var(--surface-2);border-radius:12px;padding:11px 13px;margin:10px 0}
 .note b{color:var(--ink)}
+.note.warn{background:color-mix(in srgb,var(--dot) 9%,var(--surface));color:var(--ink);display:flex;gap:9px;align-items:flex-start}
+.note.warn svg{color:var(--dot);flex:none;margin-top:1px}
+.linkbox{display:flex;gap:6px;margin:10px 0 8px}.linkbox input{flex:1;min-width:0;font-size:13.5px}
+.mlist .req{flex-direction:row;align-items:center}
+.mlist .req b{flex:1;min-width:0;overflow-wrap:anywhere}
 .section-title{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:16px;font-weight:700;margin:18px 0 10px}
 .section-title .n{background:var(--dot);color:#fff;font-family:var(--body);font-size:12px;border-radius:10px;padding:1px 8px}
 .empty-line{color:var(--muted);font-size:14px;margin:0 0 6px}
@@ -583,7 +588,7 @@ const ICONS={
 };
 function icon(n,size=20){const s=document.createElementNS("http://www.w3.org/2000/svg","svg");for(const [k,v] of Object.entries({viewBox:"0 0 24 24",width:size,height:size,fill:"none",stroke:"currentColor","stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round","aria-hidden":"true"}))s.setAttribute(k,v);s.innerHTML=ICONS[n]||"";return s}
 const AV_COLORS=["#c97a0a","#c0563a","#2e8b7a","#5566b8","#9152a0","#3f8f4f","#b4527a","#2f7fa6"];
-function initials(name){const w=String(name||"?").replace(/\b(family|familie|families)\b|'s\b/gi,"").trim().split(/[\s&+,]+/).filter(Boolean);return(((w[0]||"?")[0]||"?")+(w[1]?w[1][0]:"")).toUpperCase()}
+function initials(name){const w=String(name||"?").replace(/\([^)]*\)/g,"").replace(/\b(family|familie|families)\b|'s\b/gi,"").trim().split(/[\s&+,]+/).filter(Boolean);return(((w[0]||"?")[0]||"?")+(w[1]?w[1][0]:"")).toUpperCase()}
 function avatar(name,cls=""){let x=0;for(const c of String(name||""))x=(x*31+c.charCodeAt(0))>>>0;const e=h("span",{class:"avatar "+cls,"aria-hidden":"true"},initials(name));e.style.setProperty("--c",AV_COLORS[x%AV_COLORS.length]);return e}
 function toast(msg,ok){const t=$("toast");t.replaceChildren(ok?icon("check",16):"",msg);t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2800)}
 function fmtLeft(ms){const hrs=Math.round(ms/3600000);if(hrs<24)return `${Math.max(1,hrs)} hour${hrs===1?"":"s"} left`;const d=Math.round(hrs/24);return `${d} day${d>1?"s":""} left`}
@@ -661,7 +666,7 @@ function onMapClick(e){
   if(placing){setTemp(e.lngLat.lat,e.lngLat.lng,null);return}
   if(now()-lastFlagClick<350||(e.originalEvent&&e.originalEvent.target&&e.originalEvent.target.closest&&e.originalEvent.target.closest(".flag-icon")))return;
   $("keyPop").hidden=true;$("keyBtn").setAttribute("aria-expanded","false");
-  if(!sheet.hidden&&!["form","compose","suggest","delete"].includes(sheet.dataset.mode))closeSheet();
+  if(!sheet.hidden&&!["form","compose","suggest","delete","join","askjoin"].includes(sheet.dataset.mode))closeSheet();
 }
 
 // ---------- keep the app up to date ----------
@@ -675,7 +680,7 @@ async function checkForUpdate(initial){
     const m=(await r.text()).match(/<meta name="app-version" content="([^"]+)"/);
     if(!m||!APP_VERSION||m[1]===APP_VERSION)return;
     let tried=null;try{tried=sessionStorage.getItem("autoUpdated")}catch(e){}
-    const busy=!!placing||(!sheet.hidden&&["form","compose","suggest","delete"].includes(sheet.dataset.mode));
+    const busy=!!placing||(!sheet.hidden&&["form","compose","suggest","delete","join","askjoin"].includes(sheet.dataset.mode));
     if(initial&&tried!==m[1]&&!busy){try{sessionStorage.setItem("autoUpdated",m[1])}catch(e){}location.reload();return}
     $("updbar").hidden=false;
   }catch(e){}
@@ -705,7 +710,32 @@ let seenDoc={posts:{},notifSeenAt:0,goingSeen:{}};
 let adminIds=new Map(), sugUnsub=null;   // everyone with admin access (uid -> {name, role})
 const isOwnerMe=()=>!!me&&me===OWNER_UID;
 const isAdminId=id=>id===OWNER_UID||adminIds.has(id);
-function adminName(id){const f=families.get(id),a=adminIds.get(id);return f&&f.name||a&&a.name||(id===OWNER_UID?"Map owner":"Admin")}
+// ---------- family members ----------
+// A family can have up to 6 people. memberships/{uid} says which family a person is in ("" = none).
+// Accounts from before family members existed have no membership: their family is the flag with their own id.
+const MAX_PEOPLE=6;
+let lastInvite=null;   // the invite link made in this visit, shown again when the sheet redraws
+let memDoc, myJoin=null, joinReqs=new Map(), famUnsubs=[], famSubKey, gotIn=()=>{}, pendingInvite=null;
+function myFam(){if(!me)return null;if(memDoc&&typeof memDoc.fam==="string")return memDoc.fam&&families.has(memDoc.fam)?memDoc.fam:null;return families.has(me)?me:null}
+const goingId=()=>myFam()||me;
+// a family post belongs to everyone in the family; an admin post belongs to the admin
+const isMyPost=p=>!!me&&(p.asAdmin?p.from===me:(!!myFam()&&p.from===myFam()));
+function peopleOf(f){if(!f)return{};return f.people&&typeof f.people==="object"?f.people:{[f.id]:""}}
+function personOf(uid){for(const f of families.values()){const p=peopleOf(f);if(uid in p)return{name:p[uid]||"",fam:f}}return null}
+function myFirstName(){const f=families.get(myFam());return f?(peopleOf(f)[me]||""):""}
+// "Mohan, Priya" or "Mohan and 1 more"; null when there's nothing to say
+function memberLine(f,withYou){const p=peopleOf(f),ids=Object.keys(p);
+  const named=ids.filter(u=>p[u]).sort((a,b)=>(a===me?-1:b===me?1:0)).map(u=>withYou&&u===me?`${p[u]} (you)`:p[u]);
+  const rest=ids.length-named.length;
+  if(!named.length)return ids.length>1?`${ids.length} people`:null;
+  return named.join(", ")+(rest?` and ${rest} more`:"")}
+function newFamId(){if(!families.has(me))return me;const a=new Uint8Array(20);crypto.getRandomValues(a);return "f_"+[...a].map(b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("")}
+function addFamily(){openForm(newFamId())}
+function adminName(id){const p=personOf(id),a=adminIds.get(id);if(p)return p.name?`${p.name} (${p.fam.name||"Family"})`:(p.fam.name||"Family");return a&&a.name||(id===OWNER_UID?"Map owner":"Admin")}
+// invite link: ...#join=<secret>. Kept for the session, so it survives logging in or signing up.
+{const m=location.hash.match(/join=([A-Za-z0-9_-]{16,64})/);
+ if(m){pendingInvite=m[1];try{sessionStorage.setItem("invite",m[1])}catch(e){}history.replaceState(null,"",location.pathname+location.search)}
+ else{try{pendingInvite=sessionStorage.getItem("invite")}catch(e){}}}
 
 function connStatus(id){
   const o=outReq.get(id),i=inReq.get(id);
@@ -716,7 +746,7 @@ function connStatus(id){
 }
 function connectedIds(){const s=new Set();for(const [k,v] of outReq)if(v.status==="accepted")s.add(k);for(const [k,v] of inReq)if(v.status==="accepted")s.add(k);return s}
 function syncPrivateSubs(){
-  const want=connectedIds();if(me)want.add(me);
+  const want=connectedIds();const mf=myFam();if(mf)want.add(mf);
   for(const [id,u] of privSubs)if(!want.has(id)){u();privSubs.delete(id);privates.delete(id)}
   for(const id of want)if(!privSubs.has(id))privSubs.set(id,onSnapshot(doc(db,"private",id),s=>{if(s.exists())privates.set(id,s.data());else privates.delete(id);refresh();if(openId===id&&sheet.dataset.mode==="family")openFamily(id,true)},()=>{}));
 }
@@ -754,8 +784,9 @@ function showAuth(mode="login",msg=""){
     h("p",{class:"hello"},"నమస్కారం!"),
     h("h2",null,mode==="signup"?"Join the community map":mode==="reset"?"Reset your password":"Welcome"),
     h("p",null,"See Telugu families living near you in Koblenz and around, and connect with them."),
+    pendingInvite?h("p",{class:"note",style:"margin-top:0"},h("b",null,"You've been invited to join a family. "),"Log in, or create an account if you're new, to accept."):null,
     form,switcher,
-    h("div",{class:"note"},h("b",null,"Why do I need to log in? "),"The map shows where families live, so only members who log in can see it. It also makes sure only you can change your family's flag."),
+    h("div",{class:"note"},h("b",null,"Why do I need to log in? "),"The map shows where families live, so only members who log in can see it. It also makes sure only your family can change your flag."),
     h("p",{style:"margin:6px 0 0;font-size:13.5px"},h("button",{class:"link",type:"button",onclick:showAbout},"How it works and privacy"))));
   setTimeout(()=>email.focus(),50);
 }
@@ -767,7 +798,8 @@ function authError(code){return({
 
 onAuthStateChanged(auth,async user=>{
   unsubs.forEach(u=>u());unsubs=[];if(sugUnsub){sugUnsub();sugUnsub=null}adminIds=new Map();for(const u of privSubs.values())u();privSubs.clear();privates.clear();
-  families.clear();outReq.clear();inReq.clear();famLoaded=false;mySugg=[];allSugg=[];
+  families.clear();outReq=new Map();inReq=new Map();famLoaded=false;mySugg=[];allSugg=[];
+  famUnsubs.forEach(u=>u());famUnsubs=[];famSubKey=undefined;memDoc=undefined;myJoin=null;joinReqs=new Map();
   for(const u of goingSubs.values())u();goingSubs.clear();goingMine.clear();posts.clear();postsLoaded=false;cleaned=false;seenDoc={posts:{},notifSeenAt:0,goingSeen:{}};redrawFlags();if(!sheet.hidden)closeSheet();
   $("welcome").hidden=true;document.body.classList.toggle("loggedout",!user);
   if(!user){me=null;isAdmin=false;refresh();$("mapkey").hidden=true;$("loading").hidden=true;await introDone;if(!auth.currentUser)showAuth();return}
@@ -776,12 +808,16 @@ onAuthStateChanged(auth,async user=>{
   unsubs.push(onSnapshot(collection(db,"admins"),snap=>{const m=new Map();snap.forEach(d=>m.set(d.id,d.data()));adminIds=m;
     const v=isOwnerMe()||adminIds.has(me);if(v!==isAdmin){isAdmin=v;subscribeSugg()}refresh();
     const md=sheet.dataset.mode;if(md==="admins")showAdmins(true);else if(md==="family"&&openId)openFamily(openId,true)},()=>{}));
-  let gotFam,gotSeen,gotIn;const famReady=new Promise(r=>gotFam=r),seenReady=new Promise(r=>gotSeen=r),inReady=new Promise(r=>gotIn=r);
+  let gotFam,gotSeen,gotMem;const famReady=new Promise(r=>gotFam=r),seenReady=new Promise(r=>gotSeen=r),inReady=new Promise(r=>gotIn=r),memReady=new Promise(r=>gotMem=r);
+  const rerenderFam=()=>{const md=sheet.dataset.mode;if(md==="members")showMembers(true,sheet.dataset.fid);else if(md==="family"&&openId)openFamily(openId,true);else if(md==="notif")showNotifications(true)};
+  unsubs.push(onSnapshot(doc(db,"memberships",me),s=>{memDoc=s.exists()?s.data():null;refresh();gotMem();rerenderFam()},()=>{if(memDoc===undefined)memDoc=null;refresh();gotMem()}));
+  unsubs.push(onSnapshot(doc(db,"joins",me),s=>{myJoin=s.exists()?{id:s.id,...s.data()}:null;refresh();rerenderFam()},()=>{}));
   unsubs.push(onSnapshot(collection(db,"families"),snap=>{
     const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));families=m;famLoaded=true;$("loading").hidden=true;refresh();gotFam();
     if(openId&&!families.has(openId))closeSheet();
     if(sheet.dataset.mode==="notif")showNotifications(true);
     if(sheet.dataset.mode==="community")showCommunity(true);
+    if(sheet.dataset.mode==="members")showMembers(true,sheet.dataset.fid);
     if(isAdmin&&!migrated){migrated=true;migrateOldFlags()}
   },()=>{gotFam();$("loading").hidden=true;toast("Couldn't load the families. Reload to try again.")}));
   unsubs.push(onSnapshot(doc(db,"seen",me),s=>{const d=s.exists()?s.data():{};seenDoc={posts:{...(d.posts||{})},notifSeenAt:d.notifSeenAt||0,goingSeen:{...(d.goingSeen||{})}};refresh();gotSeen()},()=>gotSeen()));
@@ -793,17 +829,35 @@ onAuthStateChanged(auth,async user=>{
   const sortS=a=>a.sort((x,y)=>y.createdAt-x.createdAt);
   unsubs.push(onSnapshot(query(collection(db,"suggestions"),where("from","==",me)),snap=>{mySugg=sortS(snap.docs.map(d=>({id:d.id,...d.data()})));if(sheet.dataset.mode==="suggest")showSuggest(true)},()=>{}));
   subscribeSugg();
-  const onReq=()=>{syncPrivateSubs();refresh();
-    if(openId&&sheet.dataset.mode==="family")openFamily(openId,true);
-    if(sheet.dataset.mode==="notif")showNotifications(true);
-    if(sheet.dataset.mode==="conn")showConnections(true)};
-  unsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",me)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;onReq();gotIn()},()=>gotIn()));
-  unsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",me)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;onReq()},()=>{}));
   syncPrivateSubs();
   const uid=me;
-  await Promise.all([introDone,famReady,Promise.race([Promise.all([seenReady,inReady]),new Promise(r=>setTimeout(r,2500))])]);
-  if(me===uid)maybeWelcome(user);
+  await Promise.all([introDone,famReady,Promise.race([memReady,new Promise(r=>setTimeout(r,2500))])]);
+  refresh();
+  await Promise.race([Promise.all([seenReady,inReady]),new Promise(r=>setTimeout(r,2500))]);
+  if(me!==uid)return;
+  if(pendingInvite&&await handleInvite())return;
+  maybeWelcome(user);
 });
+
+// Connection requests and requests to join belong to the family, so they follow which family I'm in.
+function onReq(){syncPrivateSubs();refresh();
+  const md=sheet.dataset.mode;
+  if(openId&&md==="family")openFamily(openId,true);
+  if(md==="notif")showNotifications(true);
+  if(md==="conn")showConnections(true);
+  if(md==="members")showMembers(true,sheet.dataset.fid)}
+function syncFamSubs(){
+  if(!me||memDoc===undefined||!famLoaded)return;
+  const k=myFam()||"";if(k===famSubKey)return;famSubKey=k;
+  famUnsubs.forEach(u=>u());famUnsubs=[];inReq=new Map();outReq=new Map();joinReqs=new Map();
+  for(const u of goingSubs.values())u();goingSubs.clear();goingMine.clear();
+  if(k){
+    famUnsubs.push(onSnapshot(query(collection(db,"requests"),where("to","==",k)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.from,{id:d.id,...r})});inReq=m;onReq();gotIn()},()=>gotIn()));
+    famUnsubs.push(onSnapshot(query(collection(db,"requests"),where("from","==",k)),snap=>{const m=new Map();snap.forEach(d=>{const r=d.data();m.set(r.to,{id:d.id,...r})});outReq=m;onReq()},()=>{}));
+    famUnsubs.push(onSnapshot(query(collection(db,"joins"),where("fam","==",k)),snap=>{const m=new Map();snap.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));joinReqs=m;onReq()},()=>{}));
+  }else gotIn();
+  syncPrivateSubs();syncGoingSubs();
+}
 
 // The suggestions inbox follows admin access, which can change while the app is open.
 function subscribeSugg(){
@@ -830,9 +884,9 @@ async function migrateOldFlags(){
 // ---------- flags ----------
 function flagHTML(f,{temp=false}={}){
   let dot="";
-  if(!temp&&f.id){const ps=famPosts(f.id);if(ps.length)dot=`<span class="dot ${f.id!==me&&ps.some(isUnseen)?"unread":"read"}"></span>`}
+  if(!temp&&f.id){const ps=famPosts(f.id);if(ps.length)dot=`<span class="dot ${f.id!==myFam()&&ps.some(isUnseen)?"unread":"read"}"></span>`}
   const approx=!temp&&!exactPos(f)?" approx":"";
-  return `<div class="flag${f.id===me?" mine":""}${temp?" temp":""}${approx}"><span class="pole"></span><span class="pen"></span><span class="base"></span>${dot}<span class="nm">${esc(f.name||"Your flag")}</span></div>`;
+  return `<div class="flag${f.id&&f.id===myFam()?" mine":""}${temp?" temp":""}${approx}"><span class="pole"></span><span class="pen"></span><span class="base"></span>${dot}<span class="nm">${esc(f.name||"Your flag")}</span></div>`;
 }
 function makeFlagEl(id){
   const el=document.createElement("div");el.className="flag-icon";el.tabIndex=0;el.setAttribute("role","button");
@@ -873,11 +927,13 @@ function scaleFlags(){
 
 function unseenPostsCount(){return activePosts().filter(isUnseen).length}
 function newAccepted(){return[...outReq.values()].filter(r=>r.status==="accepted"&&(r.respondedAt||0)>seenDoc.notifSeenAt&&now()-r.respondedAt<30*86400000)}
-function myEventsWithNews(){return activePosts().filter(p=>p.isEvent&&p.from===me&&!p.legacy&&(p.going||0)>(seenDoc.goingSeen[p.id]||0))}
-function notifCount(){return pendingCount()+newAccepted().length+myEventsWithNews().length+newSuggCount()}
+function myEventsWithNews(){return activePosts().filter(p=>p.isEvent&&isMyPost(p)&&!p.legacy&&(p.going||0)>(seenDoc.goingSeen[p.id]||0))}
+function pendingJoins(){return[...joinReqs.values()].filter(r=>r.status==="pending").sort((a,b)=>b.createdAt-a.createdAt)}
+function notifCount(){return pendingCount()+newAccepted().length+myEventsWithNews().length+newSuggCount()+pendingJoins().length+(myJoin&&myJoin.status!=="pending"?1:0)}
 function newSuggCount(){return isAdmin?allSugg.filter(x=>x.status==="new").length:0}
 function pendingCount(){return[...inReq.values()].filter(r=>r.status==="pending").length}
 function refresh(){
+  syncFamSubs();
   redrawFlags();
   const n=me?notifCount():0;
   const bell=$("bellBtn"),c=$("bellCount");bell.hidden=!me;c.hidden=!n;c.textContent=n>9?"9+":String(n);
@@ -886,17 +942,17 @@ function refresh(){
   const cb=$("commBtn");cb.hidden=!me||!famLoaded;$("commDot").hidden=!me||!unseenPostsCount();
   redrawEvents();
   const mb=$("menuBtn");mb.hidden=!me;
-  if(me){const mine=families.get(me);const nm=mine&&mine.name||(auth.currentUser&&auth.currentUser.email)||"?";if(mb.dataset.nm!==nm){mb.dataset.nm=nm;mb.replaceChildren(avatar(nm))}}
+  if(me){const mine=families.get(myFam());const nm=mine&&mine.name||(auth.currentUser&&auth.currentUser.email)||"?";if(mb.dataset.nm!==nm){mb.dataset.nm=nm;mb.replaceChildren(avatar(nm))}}
   $("infoBtn").hidden=!!me;$("searchWrap").hidden=!me;
   const fab=$("fab");fab.hidden=!me||!famLoaded;
-  if(me){const has=families.has(me);const label=has?"My family":"Add my family";if(fab.dataset.l!==label){fab.dataset.l=label;fab.replaceChildren(icon(has?"flag":"plus",19),h("span",null,label));fab.classList.toggle("mine",has)}}
+  if(me){const has=!!myFam();const label=has?"My family":"Add my family";if(fab.dataset.l!==label){fab.dataset.l=label;fab.replaceChildren(icon(has?"flag":"plus",19),h("span",null,label));fab.classList.toggle("mine",has)}}
   const e=$("empty");
-  if(me&&famLoaded&&families.size===0){if(e.hidden){e.hidden=false;e.replaceChildren(h("p",{class:"hello"},"నమస్కారం!"),h("h2",null,"No families on the map yet"),h("p",null,"Be the first! Add your family and put your flag on your home."),h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("plus",18),"Add my family"))}}
+  if(me&&famLoaded&&families.size===0){if(e.hidden){e.hidden=false;e.replaceChildren(h("p",{class:"hello"},"నమస్కారం!"),h("h2",null,"No families on the map yet"),h("p",null,"Be the first! Add your family and put your flag on your home."),h("button",{class:"primary",type:"button",onclick:addFamily},icon("plus",18),"Add my family"))}}
   else e.hidden=true;
 }
 setInterval(()=>{if(families.size)refresh()},60000);
 function focusFamily(f){const p=famPos(f);if(!p)return;const run=()=>goTo(p[0],p[1],Math.max(map.getZoom(),16));requestAnimationFrame(()=>{if(map)run();else mapReady.then(m=>{if(m)run()})})}
-$("fab").onclick=()=>{const f=families.get(me);if(f){focusFamily(f);openFamily(me)}else openForm(me)};
+$("fab").onclick=()=>{const f=families.get(myFam());if(f){focusFamily(f);openFamily(f.id)}else addFamily()};
 $("bellBtn").onclick=()=>showNotifications();
 $("commBtn").onclick=()=>showCommunity();
 $("homeLink").addEventListener("click",()=>{if(window.__skipIntroNext)window.__skipIntroNext()});
@@ -915,8 +971,8 @@ function legendList(short){return h("ul",{class:"keylist"},
 
 // ---------- connections ----------
 async function sendRequest(to,note){
-  const mine=families.get(me);
-  await setDoc(doc(db,"requests",me+"_"+to),{from:me,to,note:note.slice(0,200),fromName:(mine&&mine.name||"A family").slice(0,40),status:"pending",createdAt:now()});
+  const mf=myFam(),mine=families.get(mf);if(!mf)throw new Error("no family");
+  await setDoc(doc(db,"requests",mf+"_"+to),{from:mf,to,note:note.slice(0,200),fromName:(mine&&mine.name||"A family").slice(0,40),status:"pending",createdAt:now()});
 }
 async function answerRequest(from,accept){
   const r=inReq.get(from);if(!r)return;
@@ -946,7 +1002,7 @@ function connectBox(f){
   const box=h("div",{class:"card",id:"connect-box"});
   box.append(h("h3",null,`Connect with ${name}`),
     h("p",null,hasHidden(f)?`${name} shares their exact address and contact only with connected families. When they accept, you both see each other's details.`:`Let ${name} know you'd like to get in touch. When they accept, you both see each other's details.`));
-  if(!families.has(me)){box.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("plus",18),"Add your family first"),h("p",{style:"margin:8px 0 0;font-size:13px"},"So they know who is asking."));return box}
+  if(!myFam()){box.append(h("button",{class:"primary",type:"button",onclick:addFamily},icon("plus",18),"Add your family first"),h("p",{style:"margin:8px 0 0;font-size:13px"},"So they know who is asking."));return box}
   const ta=h("textarea",{id:"c-note",maxlength:200,rows:2,placeholder:"e.g. Hi! We just moved to Lützel and have a 4-year-old too."});
   const err=h("div",{class:"err",role:"alert"});
   box.append(h("label",{for:"c-note"},h("span",null,"Add a short note ",h("span",{class:"opt"},"(optional)")),ta),err,
@@ -960,24 +1016,25 @@ function openFamily(id,refreshOnly){
   const sc=sheet.scrollTop;
   if(refreshOnly)rerenderSheet("family");else openSheet("family");
   openId=id;setSel(id);
-  const mine=id===me,st=mine?"mine":connStatus(id),addr=visibleAddress(f);
+  const mine=id===myFam(),st=mine?"mine":connStatus(id),addr=visibleAddress(f),ppl=peopleOf(f);
   sheet.append(head(f.name||"Family",addr?addr.text:null,f.name||"Family"));
   const chips=h("div",{class:"chips"});
   if(mine)chips.append(h("span",{class:"chip-s you"},"Your family"));
-  if(isAdminId(id))chips.append(h("span",{class:"chip-s"},icon("lock",13),id===OWNER_UID?"Admin (owner)":"Admin"));
+  if(Object.keys(ppl).some(isAdminId))chips.append(h("span",{class:"chip-s"},icon("lock",13),OWNER_UID in ppl?"Admin (owner)":"Admin"));
   if(st==="connected")chips.append(h("span",{class:"chip-s ok"},icon("check",13),"Connected"));
   if(!mine&&!exactPos(f))chips.append(h("span",{class:"chip-s"},icon("pin",13),"Flag shown near the home"));
   if(chips.children.length)sheet.append(chips);
   const qa=h("div",{class:"qa"});
-  if(mine)qa.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(me)},icon("edit",17),"Edit"),h("button",{type:"button",onclick:()=>showComposer()},icon("chat",17),"New post"));
-  else if(st==="none"&&families.has(me))qa.append(h("button",{class:"primary",type:"button",onclick:()=>{const b=$("connect-box");if(b){b.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{const t=$("c-note");if(t)t.focus({preventScroll:true})},450)}}},icon("people",17),"Connect"));
+  if(mine)qa.append(h("button",{class:"primary",type:"button",onclick:()=>openForm(id)},icon("edit",17),"Edit"),h("button",{type:"button",onclick:()=>showComposer()},icon("chat",17),"New post"));
+  else if(st==="none"&&myFam())qa.append(h("button",{class:"primary",type:"button",onclick:()=>{const b=$("connect-box");if(b){b.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{const t=$("c-note");if(t)t.focus({preventScroll:true})},450)}}},icon("people",17),"Connect"));
   if(qa.children.length)sheet.append(qa);
   if(st==="incoming")sheet.append(connectBox(f));
   const fps=famPosts(id);
-  if(mine&&justAdded===me&&!fps.length)sheet.append(h("div",{class:"card hl",style:"margin:0 0 14px"},h("h3",null,"Say hello to the community?"),h("p",null,"Post a short message so others know you've joined. Everyone sees a red dot on your flag."),h("div",{class:"inline"},h("button",{class:"primary",type:"button",onclick:()=>{justAdded=null;showComposer()}},icon("chat",17),"Post a message"),h("button",{class:"ghost",type:"button",onclick:()=>{justAdded=null;openFamily(me,true)}},"Not now"))));
+  if(mine&&justAdded===id&&!fps.length)sheet.append(h("div",{class:"card hl",style:"margin:0 0 14px"},h("h3",null,"Say hello to the community?"),h("p",null,"Post a short message so others know you've joined. Everyone sees a red dot on your flag."),h("div",{class:"inline"},h("button",{class:"primary",type:"button",onclick:()=>{justAdded=null;showComposer()}},icon("chat",17),"Post a message"),h("button",{class:"ghost",type:"button",onclick:()=>{justAdded=null;openFamily(id,true)}},"Not now"))));
   for(const p of fps.sort((a,b)=>(a.isEvent?a.when:a.createdAt)-(b.isEvent?b.when:b.createdAt)))sheet.append(postCard(p,{hideBy:true}));
   const dl=h("dl"),add=(k,v)=>{if(v==null||v==="")return;dl.append(h("dt",null,k),h("dd",null,v))};
   if(addr&&addr.full)add("Address",copyRow(addr.text));
+  if(!mine)add("Members",memberLine(f));
   add("What we do",f.profession);add("Interests",f.interests);
   if(f.members||f.kids)add("Family",[f.members?`${f.members} member${f.members>1?"s":""}`:null,f.kids?`${f.kids} kid${f.kids>1?"s":""}`:null].filter(Boolean).join(" · "));
   if(f.languages&&f.languages.length)add("Languages",f.languages.join(", "));
@@ -997,8 +1054,15 @@ function openFamily(id,refreshOnly){
       h("li",null,icon(f.approx?"lock":"globe",17),h("span",null,h("b",null,"Exact location and address: "),f.approx?"only connected families. Others see your street and your flag about 50 m away.":"everyone on the map.")),
       h("li",null,icon(f.contactPublic?"globe":"lock",17),h("span",null,h("b",null,"Contact: "),f.contactPublic?"everyone on the map.":"only connected families.")))),
       h("div",{class:"actions"},h("button",{type:"button",onclick:()=>showConnections()},icon("people",17),`My connections (${connectedIds().size})`)));
-  }else if(st!=="incoming")sheet.append(connectBox(f));
-  if(isAdmin&&!mine)sheet.append(h("div",{class:"actions",style:"margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"},h("span",{style:"font-size:12.5px;color:var(--muted);width:100%"},"Admin"),h("button",{class:"small",type:"button",onclick:()=>openForm(id)},icon("edit",15),"Edit"),h("button",{class:"small danger",type:"button",onclick:()=>confirmRemove(id)},icon("trash",15),"Remove flag")));
+    const n=Object.keys(ppl).length,pj=pendingJoins().length;
+    sheet.append(h("div",{class:"card"+(pj?" hl":"")},h("h3",null,"Family members"),
+      h("p",{style:"margin:0 0 10px"},memberLine(f,true)||"Just you so far. Invite your partner or family to share this flag."),
+      h("div",{class:"actions",style:"margin:0"},h("button",{class:pj?"primary":null,type:"button",onclick:()=>showMembers()},icon("people",17),pj?`${pj} asking to join`:n>1?"Members & invites":"Invite a family member"))));
+  }else{
+    if(st!=="incoming")sheet.append(connectBox(f));
+    const jb=joinBox(f);if(jb)sheet.append(jb);
+  }
+  if(isAdmin&&!mine)sheet.append(h("div",{class:"actions",style:"margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"},h("span",{style:"font-size:12.5px;color:var(--muted);width:100%"},"Admin"),h("button",{class:"small",type:"button",onclick:()=>openForm(id)},icon("edit",15),"Edit"),h("button",{class:"small",type:"button",onclick:()=>showMembers(false,id)},icon("people",15),"Members"),h("button",{class:"small danger",type:"button",onclick:()=>confirmRemove(id)},icon("trash",15),"Remove flag")));
   if(refreshOnly)sheet.scrollTop=sc;
   markSeen(f);
 }
@@ -1007,7 +1071,179 @@ function confirmRemove(id){
   sheet.append(head("Remove this flag?",null),h("p",{class:"lead"},`"${f.name||"Family"}" and their message will be removed from the map for everyone. Connections stay.`),
     h("div",{class:"actions"},
       h("button",{class:"danger-solid",type:"button",onclick:async e=>{const b=e.currentTarget;b.disabled=true;try{const wb=writeBatch(db);wb.delete(doc(db,"families",id));wb.delete(doc(db,"private",id));await wb.commit();closeSheet();toast("Flag removed",true)}catch(x){b.disabled=false;toast("Couldn't remove it. Try again.")}}},icon("trash",17),"Remove flag"),
-      h("button",{type:"button",onclick:()=>id===me?openForm(id):openFamily(id)},"Cancel")));
+      h("button",{type:"button",onclick:()=>id===myFam()?openForm(id):openFamily(id)},"Cancel")));
+}
+
+// ---------- family members: invite, ask to join, join, leave ----------
+function randToken(){const a=new Uint8Array(18);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+// A warning when joining another family means leaving (or removing) my current flag.
+function switchWarning(){
+  const mf=myFam();if(!mf)return null;const f=families.get(mf),others=Object.keys(peopleOf(f)).filter(u=>u!==me);
+  return h("p",{class:"note warn"},icon("info",17),h("span",null,others.length?`You'll leave "${f.name}". It stays on the map for the others.`:h("span",null,"Your own flag ",h("b",null,`"${f.name}"`)," will be removed, with its posts, events and connections.")));
+}
+function firstNameInput(id){const i=h("input",{type:"text",id,maxlength:30,placeholder:"e.g. Priya",autocomplete:"given-name"});i.value=myFirstName();return h("label",{for:id},"Your first name",i)}
+async function dropGoing(gid){
+  const jobs=[];for(const [pid,on] of goingMine)if(on&&posts.has(pid)){const b=writeBatch(db);b.delete(doc(db,"posts",pid,"going",gid));b.update(doc(db,"posts",pid),{going:increment(-1)});jobs.push(b.commit())}
+  await Promise.allSettled(jobs);
+}
+// The last person leaves: the flag and everything that belongs to it goes.
+async function removeFamilyData(fid){
+  await Promise.allSettled([...posts.values()].filter(p=>p.from===fid&&!p.asAdmin).map(p=>deletePost(p.id)));
+  await dropGoing(fid);
+  const b1=writeBatch(db);b1.delete(doc(db,"families",fid));b1.delete(doc(db,"private",fid));await b1.commit();
+  const b2=writeBatch(db);let n=0;
+  for(const r of new Set([...outReq.values(),...inReq.values()].map(r=>r.id))){b2.delete(doc(db,"requests",r));n++}
+  for(const r of joinReqs.values()){b2.delete(doc(db,"joins",r.id));n++}
+  if(n)await b2.commit();
+}
+async function leaveFamily(){
+  const fid=myFam(),f=families.get(fid);if(!f)return;
+  const ppl={...peopleOf(f)};delete ppl[me];
+  const b=writeBatch(db);b.update(doc(db,"families",fid),{people:ppl});b.set(doc(db,"memberships",me),{fam:"",at:now()});await b.commit();
+  memDoc={fam:"",at:now()};
+}
+async function leaveCurrent(){
+  const mf=myFam();if(!mf)return;
+  if(Object.keys(peopleOf(families.get(mf))).some(u=>u!==me))await leaveFamily();else await removeFamilyData(mf);
+}
+// Join a family: with an invite link (o.via = the link's secret) or after they accepted my request (o.via = "join").
+async function joinFamily(o,name){
+  const fid=o.fam,f=families.get(fid);if(!f)throw new Error("gone");
+  if(o.via==="join"){if(!myJoin||myJoin.fam!==fid||myJoin.status!=="approved")throw new Error("expired")}
+  else{const s=await getDoc(doc(db,"invites",o.via));const d=s.exists()?s.data():null;if(!d||d.fam!==fid||d.expiresAt<=now())throw new Error("expired")}
+  const ppl={...peopleOf(f),[me]:name};if(Object.keys(ppl).length>MAX_PEOPLE)throw new Error("full");
+  await leaveCurrent();
+  const b=writeBatch(db);
+  b.set(doc(db,"memberships",me),{fam:fid,at:now(),via:o.via});
+  b.update(doc(db,"families",fid),{people:ppl});
+  b.delete(doc(db,o.via==="join"?"joins":"invites",o.via==="join"?me:o.via));
+  await b.commit();
+  memDoc={fam:fid,at:now(),via:o.via};
+}
+function showJoin(o){
+  const f=families.get(o.fam);if(!f){toast("This family is no longer on the map.");return}
+  openSheet("join");
+  sheet.append(head(`Join ${f.name||"this family"}?`,null,f.name||"Family"));
+  sheet.append(h("p",{class:"lead"},o.via==="join"?`${f.name} accepted your request.`:`${o.byName||"Someone in this family"} invited you to share this family's flag.`),
+    h("p",{style:"margin:0 0 4px"},"You'll be able to edit the flag, post, and handle connections together. You can leave at any time."));
+  const fn=firstNameInput("j-name"),err=h("div",{class:"err",role:"alert"});
+  const go=h("button",{class:"primary grow",type:"button"},icon("check",17),`Join ${f.name||"family"}`);
+  go.onclick=async()=>{const name=$("j-name").value.trim();if(!name){err.textContent="Add your first name, so your family knows it's you.";$("j-name").focus();return}
+    go.disabled=true;err.textContent="";
+    try{await joinFamily(o,name.slice(0,30));try{sessionStorage.removeItem("invite")}catch(e){}refresh();toast(`Welcome to ${f.name}!`,true);focusFamily(f);openFamily(o.fam)}
+    catch(x){go.disabled=false;err.textContent=x&&x.message==="expired"?"This invite has expired or was already used. Ask for a new link.":x&&x.message==="full"?`${f.name} already has ${MAX_PEOPLE} members.`:"Couldn't join. Check your connection and try again."}};
+  sheet.append(h("div",{class:"fform"},fn,switchWarning(),err,h("div",{class:"actions"},go,h("button",{type:"button",onclick:closeSheet},"Not now"))));
+}
+async function handleInvite(){
+  const t=pendingInvite;pendingInvite=null;try{sessionStorage.removeItem("invite")}catch(e){}
+  let d=null;try{const s=await getDoc(doc(db,"invites",t));d=s.exists()?s.data():null}catch(e){}
+  if(!d||d.expiresAt<=now()){toast("This invite link has expired or was already used. Ask for a new one.");return false}
+  if(d.fam===myFam()){toast(`You're already in ${d.famName||"this family"}.`);return false}
+  if(!families.has(d.fam)){toast("This family is no longer on the map.");return false}
+  try{sessionStorage.setItem("invite",t)}catch(e){}
+  showJoin({fam:d.fam,via:t,byName:d.byName});return true;
+}
+// On another family's flag: "Is this your family?"
+function joinBox(f){
+  if(f.id===myFam())return null;
+  if(myJoin&&myJoin.fam===f.id){
+    if(myJoin.status==="pending")return h("div",{class:"card"},h("h3",null,"You asked to join"),h("p",{style:"margin:0 0 10px"},`Waiting for someone in ${f.name} to accept.`),
+      h("button",{class:"small",type:"button",onclick:async e=>{e.currentTarget.disabled=true;try{await deleteDoc(doc(db,"joins",me));toast("Request cancelled")}catch(x){toast("Couldn't cancel it. Try again.")}}},"Cancel request"));
+    return h("div",{class:"card hl"},myJoinCard());
+  }
+  if(Object.keys(peopleOf(f)).length>=MAX_PEOPLE)return null;
+  return h("div",{style:"margin-top:16px;text-align:center"},h("button",{class:"ghost small",type:"button",onclick:()=>showAskJoin(f.id)},icon("people",15),"Is this your family? Ask to join"));
+}
+function showAskJoin(fid){
+  const f=families.get(fid);if(!f)return;openSheet("askjoin");
+  sheet.append(head(`Ask to join ${f.name||"this family"}`,null,f.name||"Family"));
+  sheet.append(h("p",{class:"lead"},"Someone in this family gets your request. When they accept, you share the flag: you can edit it, post, and handle connections together."));
+  const fn=firstNameInput("aj-name"),err=h("div",{class:"err",role:"alert"});
+  const go=h("button",{class:"primary grow",type:"button"},icon("send",17),"Send request");
+  go.onclick=async()=>{const name=$("aj-name").value.trim();if(!name){err.textContent="Add your first name, so they know who's asking.";$("aj-name").focus();return}
+    go.disabled=true;err.textContent="";
+    try{if(myJoin)await deleteDoc(doc(db,"joins",me));
+      await setDoc(doc(db,"joins",me),{fam:fid,famName:String(f.name||"").slice(0,40),name:name.slice(0,30),fromName:String((families.get(myFam())||{}).name||"").slice(0,40),status:"pending",createdAt:now()});
+      toast("Request sent",true);openFamily(fid)}
+    catch(x){go.disabled=false;err.textContent="Couldn't send the request. Try again."}};
+  sheet.append(h("div",{class:"fform"},fn,switchWarning(),err,h("div",{class:"actions"},go,h("button",{type:"button",onclick:()=>openFamily(fid)},"Cancel"))));
+}
+// Someone asking to join my family
+function joinCard(r){
+  const err=h("div",{class:"err",role:"alert"});
+  const answer=async(ok,b)=>{b.disabled=true;try{await updateDoc(doc(db,"joins",r.id),{status:ok?"approved":"declined",respondedAt:now()});toast(ok?`${r.name} can now join`:"Request declined",ok)}catch(x){b.disabled=false;err.textContent="Couldn't save that. Try again."}};
+  return h("div",{class:"req"},
+    h("div",{class:"top"},avatar(r.name,"sm"),h("div",null,h("b",null,r.name||"Someone"),h("div",{style:"font-size:13px;color:var(--muted)"},"wants to join your family",r.fromName?`, and now has the flag "${r.fromName}"`:""),
+      h("div",{style:"font-size:12.5px;color:var(--muted);margin-top:4px"},"They'll be able to edit your flag and see your connections' details. Only accept someone you know."))),
+    h("div",{class:"actions"},h("button",{class:"primary",type:"button",onclick:e=>answer(true,e.currentTarget)},icon("check",17),"Accept"),h("button",{type:"button",onclick:e=>answer(false,e.currentTarget)},"Decline")),err);
+}
+// The answer to my own request to join
+function myJoinCard(){
+  const j=myJoin;if(!j)return null;
+  if(j.status==="approved")return h("div",{class:"req"},h("div",{class:"top"},avatar(j.famName,"sm"),h("div",null,h("b",null,j.famName||"The family")," accepted your request to join.")),
+    h("div",{class:"actions"},h("button",{class:"primary",type:"button",onclick:()=>showJoin({fam:j.fam,via:"join"})},icon("check",17),"Join now")));
+  return h("div",{class:"req"},h("div",{class:"top"},avatar(j.famName,"sm"),h("div",null,h("b",null,j.famName||"The family")," didn't accept your request to join.")),
+    h("div",{class:"actions"},h("button",{type:"button",onclick:async e=>{e.currentTarget.disabled=true;try{await deleteDoc(doc(db,"joins",me))}catch(x){}}},"OK")));
+}
+function showMembers(refreshOnly,fid){
+  fid=fid||myFam();const f=families.get(fid);if(!f){if(refreshOnly)closeSheet();return}
+  const mineFam=fid===myFam();if(!mineFam&&!isAdmin)return;
+  const sc=sheet.scrollTop;
+  if(refreshOnly)rerenderSheet("members");else openSheet("members");
+  sheet.dataset.fid=fid;
+  sheet.append(head("Family members",f.name||"Family",f.name||"Family"));
+  sheet.append(h("p",{class:"note",style:"margin-top:0"},"Everyone in a family can edit the flag, post, and handle connections. Anyone can leave at any time."));
+  const ppl=peopleOf(f),ids=Object.keys(ppl).sort((a,b)=>(a===me?-1:b===me?1:0));
+  sheet.append(h("div",{class:"section-title"},`Members (${ids.length} of ${MAX_PEOPLE})`));
+  const list=h("div",{class:"list mlist"});
+  for(const u of ids){
+    const nm=ppl[u]?(u===me?`${ppl[u]} (you)`:ppl[u]):(u===me?"You":"Name not added yet");
+    let right=null;
+    if(isAdmin&&!mineFam){right=h("button",{class:"small danger",type:"button",onclick:async()=>{right.disabled=true;
+      try{const rest={...ppl};delete rest[u];const b=writeBatch(db);b.update(doc(db,"families",fid),{people:rest});b.set(doc(db,"memberships",u),{fam:"",at:now()});await b.commit();toast("Taken out of the family",true)}
+      catch(x){right.disabled=false;toast("Couldn't do that. Try again.")}}},"Take out (admin)")}
+    list.append(h("div",{class:"req"},avatar(ppl[u]||(u===me?(auth.currentUser&&auth.currentUser.email)||"?":"?"),"sm"),h("b",null,nm,isAdminId(u)?h("span",{class:"chip-s",style:"margin-left:6px;font-size:11px;padding:1px 7px;vertical-align:2px"},"Admin"):null),right));
+  }
+  sheet.append(list);
+  if(!mineFam){if(refreshOnly)sheet.scrollTop=sc;return}
+  if(!ppl[me]){
+    const i=h("input",{type:"text",id:"m-name",maxlength:30,placeholder:"e.g. Mohan",autocomplete:"given-name"});
+    const save=h("button",{class:"small primary",type:"button",onclick:async()=>{const v=i.value.trim();if(!v){i.focus();return}save.disabled=true;
+      try{await updateDoc(doc(db,"families",fid),{people:{...ppl,[me]:v.slice(0,30)}});toast("Saved",true)}catch(x){save.disabled=false;toast("Couldn't save. Try again.")}}},"Save");
+    sheet.append(h("div",{class:"card"},h("h3",null,"Add your first name"),h("p",{style:"margin:0 0 8px"},"So others know who's who in your family."),h("div",{class:"linkbox",style:"margin:0"},i,save)));
+  }
+  const jr=pendingJoins();
+  if(jr.length){sheet.append(h("div",{class:"section-title"},"Asking to join",h("span",{class:"n"},String(jr.length))));for(const r of jr)sheet.append(joinCard(r))}
+  if(ids.length<MAX_PEOPLE){
+    const box=h("div",{class:"card"});
+    const make=h("button",{class:"primary",type:"button"},icon("send",17),"Create invite link");
+    box.append(h("h3",null,"Invite a family member"),h("p",{style:"margin:0 0 10px"},"Send a link to your partner or family. They open it, log in or sign up, and join right away. Each link works once, for 7 days."),make);
+    const showLink=link=>{const text=`Join our family "${f.name}" on the Koblenz Telugu Families map:`;
+      const inp=h("input",{type:"text",readonly:true,value:link,"aria-label":"Invite link",onfocus:e=>e.target.select()});
+      const copy=h("button",{class:"small",type:"button",onclick:async()=>{try{await navigator.clipboard.writeText(link);copy.textContent="Copied"}catch(e){inp.select();copy.textContent="Select and copy"}}},"Copy");
+      const acts=h("div",{class:"actions",style:"margin:0"});
+      if(navigator.share)acts.append(h("button",{class:"primary",type:"button",onclick:()=>navigator.share({title:"Koblenz Telugu Families",text,url:link}).catch(()=>{})},icon("send",16),"Share"));
+      acts.append(h("a",{class:"btnlink",href:"https://wa.me/?text="+encodeURIComponent(text+" "+link),target:"_blank",rel:"noopener"},"WhatsApp ↗"));
+      make.replaceWith(h("div",null,h("div",{class:"linkbox"},inp,copy),acts,h("button",{class:"ghost small",type:"button",style:"margin-top:6px;padding-left:0",onclick:()=>{lastInvite=null;showMembers(true)}},"Make another link")));
+    };
+    make.onclick=async()=>{make.disabled=true;const t=randToken(),link=location.origin+location.pathname+"#join="+t;
+      lastInvite={fid,link,until:now()+7*86400000,count:ids.length};
+      try{await setDoc(doc(db,"invites",t),{fam:fid,famName:String(f.name||"").slice(0,40),by:me,byName:String(ppl[me]||"").slice(0,30),createdAt:now(),expiresAt:now()+7*86400000})}
+      catch(x){lastInvite=null;toast("Couldn't create the link. Try again.");showMembers(true);return}
+      if(make.isConnected)showLink(link);
+    };
+    sheet.append(box);
+    // once someone joins, that link is used up
+    if(lastInvite&&lastInvite.fid===fid&&lastInvite.until>now()&&lastInvite.count===ids.length)showLink(lastInvite.link);
+  }else sheet.append(h("p",{class:"empty-line"},`Your family has ${MAX_PEOPLE} members, the most a family can have.`));
+  if(ids.length>1){
+    const area=h("div",{style:"margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"});
+    const ask=()=>area.replaceChildren(h("p",{style:"margin:0 0 8px;font-size:14px"},`Leave ${f.name}? The flag stays for the others. You can add your own flag or join another family afterwards.`),
+      h("div",{class:"actions",style:"margin:0"},h("button",{class:"danger-solid",type:"button",onclick:async e=>{e.currentTarget.disabled=true;try{await leaveFamily();refresh();closeSheet();toast(`You left ${f.name}`,true)}catch(x){toast("Couldn't leave. Try again.");ask()}}},"Leave family"),h("button",{type:"button",onclick:draw},"Cancel")));
+    const draw=()=>area.replaceChildren(h("button",{class:"linkdanger",type:"button",onclick:ask},"Leave this family"));
+    draw();sheet.append(area);
+  }
+  if(refreshOnly)sheet.scrollTop=sc;
 }
 
 // ---------- notifications (bell): only things that are about you ----------
@@ -1016,9 +1252,12 @@ function showNotifications(refreshOnly){
   sheet.append(head("Notifications","Just for you"));
   const incoming=[...inReq.values()].filter(r=>r.status==="pending").sort((a,b)=>b.createdAt-a.createdAt);
   const accepted=[...outReq.values()].filter(r=>r.status==="accepted"&&r.respondedAt&&now()-r.respondedAt<30*86400000).sort((a,b)=>b.respondedAt-a.respondedAt).slice(0,10);
-  const myEv=activePosts().filter(p=>p.isEvent&&p.from===me&&!p.legacy&&(p.going||0)>0).sort((a,b)=>a.when-b.when);
+  const myEv=activePosts().filter(p=>p.isEvent&&isMyPost(p)&&!p.legacy&&(p.going||0)>0).sort((a,b)=>a.when-b.when);
+  const joins=pendingJoins();
   const ns=newSuggCount();
   let any=false;
+  if(myJoin&&myJoin.status!=="pending"){any=true;sheet.append(h("div",{class:"section-title"},"Your request to join"),myJoinCard())}
+  if(joins.length){any=true;sheet.append(h("div",{class:"section-title"},"Asking to join your family",h("span",{class:"n"},String(joins.length))));for(const r of joins)sheet.append(joinCard(r))}
   if(incoming.length){any=true;sheet.append(h("div",{class:"section-title"},"Connection requests",h("span",{class:"n"},String(incoming.length))));for(const r of incoming)sheet.append(reqCard(r))}
   if(myEv.length){any=true;sheet.append(h("div",{class:"section-title"},"Your events"));
     for(const p of myEv){const was=seenDoc.goingSeen[p.id]||0,more=(p.going||0)-was;
@@ -1031,7 +1270,7 @@ function showNotifications(refreshOnly){
   if(isAdmin&&ns){any=true;sheet.append(h("div",{class:"section-title"},"Suggestions for you",h("span",{class:"n"},String(ns))),h("button",{type:"button",style:"width:100%",onclick:showInbox},icon("inbox",18),`Open suggestions inbox (${ns} new)`))}
   if(!any)sheet.append(h("div",{class:"empty-line",style:"text-align:center;padding:26px 10px"},h("div",{style:"color:var(--muted);margin-bottom:8px"},icon("check",28)),"You're all caught up.",h("br"),"Connection requests and replies to your events will show up here."));
   if(!refreshOnly){
-    let changed=false;const gs={};for(const p of activePosts())if(p.isEvent&&p.from===me&&!p.legacy){gs[p.id]=p.going||0;if(gs[p.id]!==(seenDoc.goingSeen[p.id]||0))changed=true}
+    let changed=false;const gs={};for(const p of activePosts())if(p.isEvent&&isMyPost(p)&&!p.legacy){gs[p.id]=p.going||0;if(gs[p.id]!==(seenDoc.goingSeen[p.id]||0))changed=true}
     if(newAccepted().length)changed=true;
     if(changed){seenDoc={...seenDoc,notifSeenAt:now(),goingSeen:gs};saveSeen();refresh()}
   }
@@ -1067,12 +1306,13 @@ function showConnections(refreshOnly){
 // ---------- menu ----------
 function showMenu(){
   openSheet("menu");
-  const mine=families.get(me),email=auth.currentUser&&auth.currentUser.email||"";
+  const mine=families.get(myFam()),email=auth.currentUser&&auth.currentUser.email||"";
   const row=(ic,label,sub,onclick,extra)=>h("button",{class:"row",type:"button",onclick},h("span",{class:"ic"},icon(ic,19)),h("span",{class:"lbl"},label,sub?h("small",null,sub):null),extra||null,icon("chev",18));
   const pend=pendingCount(),conns=connectedIds().size;
   sheet.append(h("div",{class:"profile"},avatar(mine?mine.name:email,"lg"),h("div",{class:"t"},h("b",null,mine?mine.name:"No flag yet"),h("span",null,email),isAdmin?h("span",{class:"chip-s you",style:"display:inline-flex;margin-top:4px"},isOwnerMe()?"Owner":"Admin"):null),h("button",{class:"x",type:"button","aria-label":"Close",onclick:closeSheet},icon("close",18))));
   sheet.append(h("div",{class:"rows"},
-    row("flag",mine?"My family":"Add my family",mine?"See and edit your flag":"Put your family on the map",()=>{if(mine){focusFamily(mine);openFamily(me)}else openForm(me)}),
+    row("flag",mine?"My family":"Add my family",mine?"See and edit your flag":"Put your family on the map",()=>{if(mine){focusFamily(mine);openFamily(mine.id)}else addFamily()}),
+    mine?row("people","Family members",memberLine(mine,true)||"Invite your partner or family",()=>showMembers(),pendingJoins().length?h("span",{class:"n"},`${pendingJoins().length} new`):null):null,
     row("chat","Community","Messages and events from families",()=>showCommunity(),unseenPostsCount()?h("span",{class:"n"},`${unseenPostsCount()} new`):null),
     mine?row("plus","New post","Share news or plan an event",()=>showComposer()):null,
     row("people","My connections",`${conns} connected`,()=>showConnections(),pend?h("span",{class:"n"},`${pend} new`):null),
@@ -1096,7 +1336,7 @@ function showSuggest(refreshOnly){
   const send=h("button",{class:"primary grow",type:"button"},icon("send",17),"Send to admin");
   send.onclick=async()=>{const t=ta.value.trim();if(!t){err.textContent="Write your suggestion first.";ta.focus();return}
     send.disabled=true;err.textContent="";
-    const mine=families.get(me),email=auth.currentUser&&auth.currentUser.email||"";
+    const mine=families.get(myFam()),email=auth.currentUser&&auth.currentUser.email||"";
     try{await setDoc(doc(collection(db,"suggestions")),{from:me,fromName:(mine&&mine.name||"No flag yet").slice(0,60),email,type:sheet.querySelector('input[name="sg-type"]:checked').value,text:t,status:"new",createdAt:now()});
       ta.value="";upd();send.disabled=false;toast("Thank you! Sent to the admin",true)}
     catch(x){send.disabled=false;err.textContent="Couldn't send it. Check your connection and try again."}};
@@ -1149,20 +1389,22 @@ function showAdmins(refreshOnly){
     sheet.append(h("div",{class:"req",style:"flex-direction:row;align-items:center"},avatar(nm,"sm"),h("b",{style:"flex:1;min-width:0;overflow-wrap:anywhere"},nm),rm));
   }
   sheet.append(h("div",{class:"section-title"},"Add an admin"));
-  const q=h("input",{type:"search",id:"adm-q",placeholder:"Search a family on the map",autocomplete:"off"});
+  const q=h("input",{type:"search",id:"adm-q",placeholder:"Search a name or family",autocomplete:"off"});
   const list=h("div",{class:"list"});
   const draw=()=>{list.textContent="";const t=norm(q.value);
-    const cands=[...families.values()].filter(f=>!isAdminId(f.id)&&(!t||norm(f.name).includes(t))).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
-    if(!cands.length)list.append(h("p",{class:"empty-line"},t?"No family with that name.":"Every family on the map is already an admin."));
-    for(const f of cands.slice(0,30)){
+    // admin access is for a person: each member of a family is listed on their own
+    const cands=[];for(const f of families.values()){const p=peopleOf(f);for(const u in p)if(!isAdminId(u))cands.push({uid:u,label:p[u]?`${p[u]} (${f.name||"Family"})`:(f.name||"Family")})}
+    const shown=cands.filter(c=>!t||norm(c.label).includes(t)).sort((a,b)=>a.label.localeCompare(b.label));
+    if(!shown.length)list.append(h("p",{class:"empty-line"},t?"No one with that name.":"Everyone on the map is already an admin."));
+    for(const c of shown.slice(0,30)){
       const row=h("div",{class:"req",style:"flex-direction:row;align-items:center;flex-wrap:wrap"});
       const make=h("button",{class:"small",type:"button"},"Make admin");
-      make.onclick=()=>{row.replaceChildren(h("div",{style:"width:100%;font-size:14px"},`Make ${f.name} an admin? They'll be able to see hidden details and remove flags and posts.`),
-        h("div",{class:"actions",style:"margin:6px 0 0"},h("button",{class:"small primary",type:"button",onclick:async e=>{e.currentTarget.disabled=true;try{await setDoc(doc(db,"admins",f.id),{role:"admin",name:String(f.name||"").slice(0,60),addedAt:now()});toast(`${f.name} is now an admin`,true)}catch(x){toast("Couldn't give admin access. Check the rules are published.");draw()}}},"Yes, make admin"),h("button",{class:"small",type:"button",onclick:draw},"Cancel")))};
-      row.append(avatar(f.name,"sm"),h("b",{style:"flex:1;min-width:0;overflow-wrap:anywhere"},f.name||"Family"),make);list.append(row);
+      make.onclick=()=>{row.replaceChildren(h("div",{style:"width:100%;font-size:14px"},`Make ${c.label} an admin? They'll be able to see hidden details and remove flags and posts.`),
+        h("div",{class:"actions",style:"margin:6px 0 0"},h("button",{class:"small primary",type:"button",onclick:async e=>{e.currentTarget.disabled=true;try{await setDoc(doc(db,"admins",c.uid),{role:"admin",name:c.label.slice(0,60),addedAt:now()});toast(`${c.label} is now an admin`,true)}catch(x){toast("Couldn't give admin access. Check the rules are published.");draw()}}},"Yes, make admin"),h("button",{class:"small",type:"button",onclick:draw},"Cancel")))};
+      row.append(avatar(c.label,"sm"),h("b",{style:"flex:1;min-width:0;overflow-wrap:anywhere"},c.label),make);list.append(row);
     }};
   q.oninput=draw;draw();
-  sheet.append(q,h("p",{style:"font-size:12.5px;color:var(--muted);margin:6px 0 10px"},"Only families on the map can be made admins."),list);
+  sheet.append(q,h("p",{style:"font-size:12.5px;color:var(--muted);margin:6px 0 10px"},"Only people in a family on the map can be made admins."),list);
 }
 
 // ---------- about & privacy ----------
@@ -1176,12 +1418,14 @@ function showAbout(){
     faq("What do the flags mean?",true,legendList()),
     faq("Why do I need to log in?",false,h("p",null,"The map shows where families live, so only members who log in can see it. Logging in also makes sure only you can change your family's flag.")),
     faq("Who can see my details?",false,ul(
-      "Everyone logged in: your family name, street and postcode, what you do, interests, languages, \"about us\" and your message.",
+      "Everyone logged in: your family name, the first names of its members, street and postcode, what you do, interests, languages, \"about us\" and your posts.",
       "Your exact location, full address and contact: you choose for each one, either everyone or only families you've connected with.",
       "The admins can see all details, including hidden ones, to keep the map safe and tidy.")),
     faq("Who are the admins?",false,h("p",null,"Admins can edit or remove any flag or post, read suggestions, and see hidden details."),
       h("ul",null,...[...new Set([OWNER_UID,...adminIds.keys()])].map(id=>h("li",null,adminName(id),id===OWNER_UID&&adminName(id)!=="Map owner"?" (owner)":"")))),
     faq("How do connections work?",false,h("p",null,"Open a family's flag and send a request, with a short note if you like. When they accept, you both see each other's full address, contact and directions. You only connect once, and either of you can remove the connection at any time.")),
+    faq("Family members",false,h("p",null,"Partners and family can share one flag, up to 6 people. Open your family's flag, tap Invite a family member and send them the link. Or find your family's flag on the map and tap Ask to join."),
+      h("p",null,"Everyone in a family can edit the flag, post, and handle connections, and anyone can leave at any time. If someone ends up in the wrong family, an admin can take them out.")),
     faq("Community: messages and events",false,h("p",null,"Tap Community (bottom left) to see what's happening. Tap New post to share news or ask a question. Turn on \"Add date & place\" to make it an event, and pin the place on the map if you like."),
       h("p",null,"Families can tap I'm going. Everyone sees how many are going; only the organiser sees who. Messages disappear after the days you choose, events after the day they happen.")),
     faq("What does the bell show?",false,h("p",null,"Only things about you: connection requests, families who accepted your request, and families going to your events.")),
@@ -1191,7 +1435,7 @@ function showAbout(){
       "Everything is stored with Google Firebase. It's not used for ads and never sold or shared.",
       "The map comes from OpenFreeMap and OpenStreetMap. When you search for an address, the search text is sent to OpenStreetMap's address search (Nominatim).",
       "Questions? Ask the admin in the community WhatsApp group.")),
-    faq("Deleting your account",false,h("p",null,"You can delete your account at any time. It removes your flag, details, message, connections and login straight away."),me?h("button",{class:"danger",type:"button",onclick:showDelete},icon("trash",16),"Delete my account"):h("p",null,"Log in first, then open the menu (top right) and choose Delete my account.")));
+    faq("Deleting your account",false,h("p",null,"You can delete your account at any time. It removes your login straight away. If you're the only one in your family, it also removes your flag, details, posts and connections. If others are in your family, the flag stays with them."),me?h("button",{class:"danger",type:"button",onclick:showDelete},icon("trash",16),"Delete my account"):h("p",null,"Log in first, then open the menu (top right) and choose Delete my account.")));
   if(me)sheet.append(h("details",{style:"margin-top:10px"},h("summary",{style:"font-size:13px;color:var(--muted);cursor:pointer"},"Your user ID (for admin setup)"),h("div",{style:"margin-top:6px"},copyRow(me))));
 }
 
@@ -1199,10 +1443,13 @@ function showAbout(){
 function showDelete(){
   openSheet("delete");
   sheet.append(head("Delete your account?",null));
+  const mf=myFam(),fam=families.get(mf),others=mf?Object.keys(peopleOf(fam)).filter(u=>u!==me):[];
+  const items=others.length?[`You're taken out of ${fam.name||"your family"}. The flag stays for the others.`,"Your suggestions","Your login"]
+    :["Your flag, address and contact","Your posts and events","Your connections and requests","Your suggestions","Your login"];
   sheet.append(h("p",{class:"lead",style:"margin-bottom:8px"},"This removes everything about you from the map, straight away:"),
-    h("ul",{class:"who-sees",style:"margin-bottom:12px"},...["Your flag, address and contact","Your posts and events","Your connections and requests","Your suggestions","Your login"].map(t=>h("li",null,icon("check",17),t))),
+    h("ul",{class:"who-sees",style:"margin-bottom:12px"},...items.map(t=>h("li",null,icon("check",17),t))),
     h("p",{style:"margin:0 0 12px"},h("b",null,"This can't be undone.")));
-  if(isAdmin)sheet.append(h("p",{class:"note"},h("b",null,"You're the admin. "),"Make someone else admin in Firebase first, so the map still has an admin."));
+  if(isOwnerMe())sheet.append(h("p",{class:"note"},h("b",null,"You're the map owner. "),"Without your account, nobody can give or remove admin access until the owner ID in the app is changed."));
   const pw=h("input",{type:"password",id:"del-pw",autocomplete:"current-password"});
   const err=h("div",{class:"err",role:"alert"});
   const label=h("span",null,"Delete my account");
@@ -1214,14 +1461,14 @@ function showDelete(){
 async function deleteAccount(password){
   const u=auth.currentUser;if(!u)return;
   await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,password));
-  const jobs=[];
-  for(const p of posts.values())if(p.from===me)jobs.push(deletePost(p.id));
-  for(const [pid,on] of goingMine)if(on&&posts.has(pid)){const b=writeBatch(db);b.delete(doc(db,"posts",pid,"going",me));b.update(doc(db,"posts",pid),{going:increment(-1)});jobs.push(b.commit())}
-  await Promise.allSettled(jobs);
-  const b1=writeBatch(db);b1.delete(doc(db,"families",me));b1.delete(doc(db,"private",me));b1.delete(doc(db,"seen",me));await b1.commit();
-  const ids=new Set([...outReq.values(),...inReq.values()].map(r=>r.id));
-  mySugg.forEach(x=>ids.add("s:"+x.id));
-  if(ids.size){const b2=writeBatch(db);ids.forEach(id=>id.startsWith("s:")?b2.delete(doc(db,"suggestions",id.slice(2))):b2.delete(doc(db,"requests",id)));await b2.commit()}
+  const mf=myFam(),others=mf?Object.keys(peopleOf(families.get(mf))).filter(x=>x!==me):[];
+  await Promise.allSettled([...posts.values()].filter(p=>p.asAdmin&&p.from===me).map(p=>deletePost(p.id)));
+  if(mf&&others.length)await leaveFamily();      // the flag stays with the rest of the family
+  else if(mf)await removeFamilyData(mf);           // last one in the family: the flag goes
+  else await dropGoing(me);
+  const b=writeBatch(db);b.delete(doc(db,"seen",me));mySugg.forEach(x=>b.delete(doc(db,"suggestions",x.id)));if(myJoin)b.delete(doc(db,"joins",me));await b.commit();
+  try{await deleteDoc(doc(db,"memberships",me))}catch(e){}
+  if(adminIds.has(me))try{await deleteDoc(doc(db,"admins",me))}catch(e){}
   await deleteUser(u);
   try{await terminate(db);await clearIndexedDbPersistence(db)}catch(e){}
   try{sessionStorage.clear()}catch(e){}
@@ -1234,7 +1481,7 @@ function legacyPosts(){const out=[];for(const f of families.values()){const m=ac
 function activePosts(){const t=now();return[...[...posts.values()].filter(p=>p.expiresAt>t&&p.text),...legacyPosts()]}
 function famPosts(fid){return activePosts().filter(p=>p.from===fid&&!p.asAdmin)}
 const postKey=p=>p.legacy?`${p.id}:${p.createdAt}`:p.id;
-const isUnseen=p=>!!me&&p.from!==me&&!seenDoc.posts[postKey(p)];
+const isUnseen=p=>!!me&&!isMyPost(p)&&!seenDoc.posts[postKey(p)];
 let seenTimer=0;
 function saveSeen(){clearTimeout(seenTimer);seenTimer=setTimeout(async()=>{
   const keep={};const live=new Set(activePosts().map(postKey));for(const k in seenDoc.posts)if(live.has(k))keep[k]=1;
@@ -1243,21 +1490,22 @@ function saveSeen(){clearTimeout(seenTimer);seenTimer=setTimeout(async()=>{
   try{await setDoc(doc(db,"seen",me),seenDoc)}catch(e){}},400)}
 function markPostsSeen(list){let ch=false;for(const p of list)if(isUnseen(p)){seenDoc.posts[postKey(p)]=1;ch=true}if(ch){refresh();saveSeen()}}
 function syncGoingSubs(){
-  const want=new Set(activePosts().filter(p=>p.isEvent&&!p.legacy&&p.from!==me).map(p=>p.id));
+  if(!me||famSubKey===undefined)return;
+  const gid=goingId(),want=new Set(activePosts().filter(p=>p.isEvent&&!p.legacy&&!isMyPost(p)).map(p=>p.id));
   for(const [id,u] of goingSubs)if(!want.has(id)){u();goingSubs.delete(id);goingMine.delete(id)}
-  for(const id of want)if(!goingSubs.has(id))goingSubs.set(id,onSnapshot(doc(db,"posts",id,"going",me),s=>{goingMine.set(id,s.exists());const md=sheet.dataset.mode;if(md==="community")showCommunity(true);else if(md==="postview"&&openPostId===id)openPost(id,true);else if(md==="family"&&openId)openFamily(openId,true)},()=>{}));
+  for(const id of want)if(!goingSubs.has(id))goingSubs.set(id,onSnapshot(doc(db,"posts",id,"going",gid),s=>{goingMine.set(id,s.exists());const md=sheet.dataset.mode;if(md==="community")showCommunity(true);else if(md==="postview"&&openPostId===id)openPost(id,true);else if(md==="family"&&openId)openFamily(openId,true)},()=>{}));
 }
 async function setGoing(p,on){
-  const b=writeBatch(db),nm=((families.get(me)||{}).name||(isAdmin?ADMIN_NAME:"A family")).slice(0,40);
-  if(on){b.set(doc(db,"posts",p.id,"going",me),{name:nm,at:now()});b.update(doc(db,"posts",p.id),{going:increment(1)})}
-  else{b.delete(doc(db,"posts",p.id,"going",me));b.update(doc(db,"posts",p.id),{going:increment(-1)})}
+  const gid=goingId(),b=writeBatch(db),nm=((families.get(myFam())||{}).name||(isAdmin?ADMIN_NAME:"A member")).slice(0,40);
+  if(on){b.set(doc(db,"posts",p.id,"going",gid),{name:nm,at:now()});b.update(doc(db,"posts",p.id),{going:increment(1)})}
+  else{b.delete(doc(db,"posts",p.id,"going",gid));b.update(doc(db,"posts",p.id),{going:increment(-1)})}
   await b.commit();
 }
 async function deletePost(pid){
   const gs=await getDocs(collection(db,"posts",pid,"going"));
   const b=writeBatch(db);gs.forEach(d=>b.delete(doc(db,"posts",pid,"going",d.id)));b.delete(doc(db,"posts",pid));await b.commit();
 }
-async function cleanupExpired(){const t=now();for(const p of posts.values())if(p.expiresAt<=t&&(p.from===me||isAdmin)){try{await deletePost(p.id)}catch(e){}}}
+async function cleanupExpired(){const t=now();for(const p of posts.values())if(p.expiresAt<=t&&(isMyPost(p)||isAdmin)){try{await deletePost(p.id)}catch(e){}}}
 function fmtWhen(ts){try{const d=new Date(ts);return d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})+", "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}catch(e){return""}}
 function ago(ts){const m=Math.round((now()-ts)/60000);if(m<1)return"just now";if(m<60)return`${m} min ago`;const hr=Math.round(m/60);if(hr<24)return`${hr} h ago`;const d=Math.round(hr/24);return`${d} day${d>1?"s":""} ago`}
 function dirLinks(lat,lng){const dest=`${lat},${lng}`;
@@ -1266,7 +1514,7 @@ function dirLinks(lat,lng){const dest=`${lat},${lng}`;
   const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend" in document);return ios?[a,g]:[g,a]}
 // One card for a message or an event, used in Community, on family sheets and for a single post.
 function postCard(p,opt={}){
-  const mine=p.from===me,nm=p.asAdmin?ADMIN_NAME:nameOf(p.from,p.fromName),isNew=opt.newKeys?opt.newKeys.has(postKey(p)):false;
+  const mine=isMyPost(p),nm=p.asAdmin?ADMIN_NAME:nameOf(p.from,p.fromName),isNew=opt.newKeys?opt.newKeys.has(postKey(p)):false;
   const card=h("div",{class:"post"+(isNew?" unseen":"")+(p.asAdmin?" admin":"")});
   const av=p.asAdmin?h("span",{class:"avatar sm adminav","aria-hidden":"true"},icon("lock",15)):avatar(nm,"sm");
   if(!opt.hideBy)card.append(h("div",{class:"by"},av,h("button",{class:"t",type:"button",onclick:()=>{if(p.asAdmin)return;const f=families.get(p.from);if(f){focusFamily(f);openFamily(p.from)}}},h("b",null,mine?`${nm} (you)`:nm,p.asAdmin?h("span",{class:"chip-s you",style:"margin-left:6px;font-size:11px;padding:1px 7px;vertical-align:2px"},"Admin"):null),h("small",null,p.isEvent?`Posted ${ago(p.createdAt)}`:`${ago(p.createdAt)} · ${fmtLeft(p.expiresAt-now())}`)),isNew?h("span",{class:"newchip"},"New"):null));
@@ -1299,8 +1547,8 @@ function showCommunity(refreshOnly){
   const list=activePosts();
   if(!refreshOnly)commNew=new Set(list.filter(isUnseen).map(postKey));
   sheet.append(head("Community","Messages and events from families"));
-  sheet.append(families.has(me)||isAdmin?h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:4px;padding:12px",onclick:()=>showComposer()},icon("plus",18),"New post")
-    :h("p",{class:"note",style:"margin-top:0"},"Add your family to the map to post. ",h("button",{class:"link",type:"button",onclick:()=>openForm(me)},"Add my family")));
+  sheet.append(myFam()||isAdmin?h("button",{class:"primary",type:"button",style:"width:100%;margin-bottom:4px;padding:12px",onclick:()=>showComposer()},icon("plus",18),"New post")
+    :h("p",{class:"note",style:"margin-top:0"},"Add your family to the map to post. ",h("button",{class:"link",type:"button",onclick:addFamily},"Add my family")));
   const events=list.filter(p=>p.isEvent).sort((a,b)=>a.when-b.when),msgs=list.filter(p=>!p.isEvent).sort((a,b)=>b.createdAt-a.createdAt);
   sheet.append(h("div",{class:"section-title"},icon("cal",18),"Upcoming events"));
   if(!events.length)sheet.append(h("p",{class:"empty-line"},"No events yet. Planning a get-together? Tap New post and add a date & place."));
@@ -1346,7 +1594,7 @@ const pad2=n=>String(n).padStart(2,"0");
 const ymd=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 // One form for both: a message, or (with "Add date & place") an event.
 function showComposer(edit){
-  if(!families.has(me)&&!isAdmin){openForm(me);return}
+  if(!myFam()&&!isAdmin){addFamily();return}
   openSheet("compose");
   sheet.append(head(edit?(edit.isEvent?"Edit event":"Edit post"):"New post","Everyone on the map can see it"));
   const ta=h("textarea",{id:"pc-text",maxlength:400,rows:3,placeholder:"e.g. Ugadi potluck at our place, everyone welcome! Bring one dish."});ta.value=edit?edit.text:"";
@@ -1381,8 +1629,8 @@ function showComposer(edit){
       if(!(when>t-3600000)){err.textContent="That date is in the past. Choose a future date.";date.focus();return}
       const end=new Date(when);end.setHours(23,59,59,999);expiresAt=Math.max(end.getTime(),when+3*3600000);
     }else{const days=+sheet.querySelector('input[name="pc-days"]:checked').value||3;expiresAt=(edit?created:t)+days*86400000;if(edit&&expiresAt<t)expiresAt=t+days*86400000}
-    const asAdmin=isAdmin&&(!families.has(me)||(sheet.querySelector('input[name="pc-as"]:checked')||{}).value==="admin");
-    const data={from:me,fromName:(asAdmin?ADMIN_NAME:((families.get(me)||{}).name||"A family")).slice(0,40),text,createdAt:created,expiresAt,isEvent,when,place:isEvent?place.value.trim():"",lat:isEvent&&pin?r6(pin[0]):null,lng:isEvent&&pin?r6(pin[1]):null};
+    const mf=myFam(),asAdmin=edit?!!edit.asAdmin:isAdmin&&(!mf||(sheet.querySelector('input[name="pc-as"]:checked')||{}).value==="admin");
+    const data={from:edit?edit.from:asAdmin?me:mf,fromName:(asAdmin?ADMIN_NAME:((families.get(edit?edit.from:mf)||{}).name||edit&&edit.fromName||"A family")).slice(0,40),text,createdAt:created,expiresAt,isEvent,when,place:isEvent?place.value.trim():"",lat:isEvent&&pin?r6(pin[0]):null,lng:isEvent&&pin?r6(pin[1]):null};
     if(asAdmin||edit&&edit.asAdmin)data.asAdmin=asAdmin;
     if(!isEvent&&data.expiresAt>data.createdAt+15*86400000)data.createdAt=t;
     go.disabled=true;
@@ -1392,8 +1640,8 @@ function showComposer(edit){
       toast(edit?"Saved":isEvent?"Event posted":"Posted",true);showCommunity();
     }catch(x){go.disabled=false;err.textContent="Couldn't post it. Check your connection and try again."}
   };
-  const mineF=families.get(me),asAdm0=edit?!!edit.asAdmin:!mineF;
-  const asRow=isAdmin?(mineF?h("div",{class:"fform",style:"gap:6px"},h("div",{class:"glabel"},"Post as"),h("div",{class:"pills",role:"radiogroup","aria-label":"Post as"},
+  const mineF=families.get(myFam()),asAdm0=!mineF;
+  const asRow=isAdmin&&!edit?(mineF?h("div",{class:"fform",style:"gap:6px"},h("div",{class:"glabel"},"Post as"),h("div",{class:"pills",role:"radiogroup","aria-label":"Post as"},
       h("label",{class:"pill"},h("input",{type:"radio",name:"pc-as",value:"family",checked:!asAdm0}),h("span",null,mineF.name)),
       h("label",{class:"pill"},h("input",{type:"radio",name:"pc-as",value:"admin",checked:asAdm0}),h("span",null,ADMIN_NAME))))
     :h("p",{class:"note",style:"margin:0"},icon("lock",15)," You'll post as ",h("b",null,ADMIN_NAME),", since you haven't added a family.")):null;
@@ -1488,11 +1736,11 @@ $("p-loc").onclick=()=>{
 
 // ---------- add / edit family ----------
 async function openForm(id){
-  if(!id)return;const f=families.get(id)||{},editingOther=id!==me;
+  if(!id)return;const f=families.get(id)||{},editingOther=families.has(id)&&id!==myFam();
   let priv=privates.get(id)||null;
   if(!priv&&families.has(id)){try{const s=await getDoc(doc(db,"private",id));if(s.exists())priv=s.data()}catch(e){}}
   openSheet("form");
-  sheet.append(head(editingOther?"Edit family (admin)":families.has(id)?"Edit my family":"Add my family",editingOther?null:"Only you and the admin can change this"));
+  sheet.append(head(editingOther?"Edit family (admin)":families.has(id)?"Edit my family":"Add my family",editingOther?null:"Only your family and the admins can change this"));
   const v=x=>x==null?"":String(x);
   const inp=(idn,label,val,o={},opt)=>{const i=h(o.tag||"input",Object.assign({id:idn},o.tag?{}:{type:o.type||"text"},o.extra||{}));i.value=val;return h("label",{for:idn},h("span",null,label,opt?h("span",{class:"opt"}," (optional)"):null),i)};
   let pos=priv&&typeof priv.lat==="number"?[priv.lat,priv.lng]:(typeof f.lat==="number"&&!f.approx?[f.lat,f.lng]:null);
@@ -1512,6 +1760,7 @@ async function openForm(id){
   const form=h("form",{novalidate:true,class:"fform"},
     step(1,"Your flag","Needed",
       inp("f-name","Family or display name",v(f.name),{extra:{maxlength:40,placeholder:"e.g. Rao family",autocomplete:"off"}}),
+      editingOther?null:h("div",null,inp("f-me","Your first name",families.has(id)?v(peopleOf(f)[me]):"",{extra:{maxlength:30,placeholder:"e.g. Priya",autocomplete:"given-name"}},true),h("small",{style:"display:block;margin-top:4px;color:var(--muted);font-size:12.5px"},"Shown as a member of this family, so others know who's who.")),
       h("div",{class:"place"},placeBtn,placedTxt),
       inp("f-addr","Address",v(fullAddr),{extra:{maxlength:120,placeholder:"e.g. Löhrstraße 12, 56068 Koblenz",autocomplete:"street-address"}},true)),
     step(2,"Who can see what",null,
@@ -1527,7 +1776,7 @@ async function openForm(id){
       h("div",{class:"glabel"},"Languages"),langs,
       inp("f-about","About us",v(f.about),{tag:"textarea",extra:{maxlength:200,rows:2,placeholder:"A line or two about your family"}})),
     err,
-    families.has(id)&&!editingOther?h("button",{class:"linkdanger",type:"button",onclick:()=>confirmRemove(id)},icon("trash",16),"Delete my flag"):null,
+    families.has(id)&&!editingOther&&Object.keys(peopleOf(f)).length<=1?h("button",{class:"linkdanger",type:"button",onclick:()=>confirmRemove(id)},icon("trash",16),"Delete my flag"):null,
     h("div",{class:"formbar"},h("button",{class:"primary",type:"submit"},icon("check",18),"Save"),h("button",{type:"button",onclick:()=>families.has(id)?openFamily(id):closeSheet()},"Cancel")));
   sheet.append(form);
   $("f-addr").addEventListener("input",updPreview);updPreview();
@@ -1551,10 +1800,16 @@ async function openForm(id){
       members:num($("f-mem").value,20),kids:num($("f-kids").value,15),
       languages:[...form.querySelectorAll('input[name="lang"]:checked')].map(c=>c.value),
       about:$("f-about").value.trim(),message,updatedAt:now(),v:2};
+    if(!editingOther)pub.people={...(isNew?{}:peopleOf(f)),[me]:$("f-me").value.trim().slice(0,30)};
+    else if(f.people)pub.people=f.people;
     const prv={lat,lng,address,contact,dLat,dLng};
     const btn=form.querySelector("button[type=submit]");btn.disabled=true;err.textContent="";
     try{
-      const b=writeBatch(db);b.set(doc(db,"private",id),prv);b.set(doc(db,"families",id),pub);await b.commit();
+      const b=writeBatch(db);b.set(doc(db,"private",id),prv);b.set(doc(db,"families",id),pub);
+      // a new flag also records which family I'm in (not needed for a first flag under my own id)
+      if(isNew&&!editingOther&&(id!==me||memDoc))b.set(doc(db,"memberships",me),{fam:id,at:now()});
+      await b.commit();
+      if(isNew&&!editingOther&&(id!==me||memDoc))memDoc={fam:id,at:now()};
       if(isNew&&!editingOther)justAdded=id;
       families.set(id,{id,...pub});privates.set(id,prv);refresh();focusFamily(families.get(id));openFamily(id);toast(isNew?"Your flag is on the map":"Saved",true);
     }catch(x){btn.disabled=false;err.textContent=x&&x.code==="permission-denied"?"You can't save this flag. Check that you're logged in to your own account.":"Couldn't save. Check your connection and try again."}
@@ -1579,8 +1834,8 @@ function maybeWelcome(user){
   const w=$("welcome");w.textContent="";w.hidden=false;
   const close=()=>{w.hidden=true;w.textContent=""};
   w.onclick=e=>{if(e.target===w)close()};
-  const mine=families.get(me);
-  const others=[...families.values()].filter(f=>f.id!==me);
+  const mine=families.get(myFam());
+  const others=[...families.values()].filter(f=>f.id!==myFam());
   const unread=activePosts().filter(isUnseen).sort((a,b)=>b.createdAt-a.createdAt);
   const pend=pendingCount();
   const card=h("div",{class:"card wl",role:"dialog","aria-modal":"true","aria-labelledby":"w-title",tabindex:"-1"});
@@ -1596,8 +1851,9 @@ function maybeWelcome(user){
       h("p",{class:"wprivacy"},icon("lock",17),h("span",null,"You decide who sees your exact address and contact. Only members who log in can see the map.")),
       h("div",{class:"avstack"},n?h("span",{class:"avs"},...others.slice(0,4).map(f=>avatar(f.name))):null,h("span",null,n?`${n} ${n===1?"family is":"families are"} already here`:"Be one of the first families on the map")),
       h("div",{class:"actions"},
-        h("button",{class:"primary",type:"button",onclick:()=>{close();openForm(me)}},icon("plus",18),"Add my family"),
-        h("button",{type:"button",onclick:close},"Look around first")));
+        h("button",{class:"primary",type:"button",onclick:()=>{close();addFamily()}},icon("plus",18),"Add my family"),
+        h("button",{type:"button",onclick:close},"Look around first")),
+      h("p",{style:"margin:10px 0 0;font-size:13px;color:var(--muted)"},"Is your partner already on the map? Ask them for an invite link, or tap your family's flag and choose Ask to join."));
   }else{
     const famCount=families.size;
     card.append(

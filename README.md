@@ -13,6 +13,7 @@ Works in any phone or computer browser. Nothing to install.
 
 - **Add your family's flag.** Search your address or tap the spot on the map, then drag to fine-tune.
 - **Share only what you want.** Name, work, interests, languages, kids, "about us": every detail is optional.
+- **Share the flag with your family.** Partners and family (up to 6 people) can join the same flag, with an invite link or by asking to join. Everyone in a family can edit the flag, post and handle connections.
 - **Find families nearby.** Search by name, job or interest and the map jumps to the best match.
 - **Connect.** Send a request with a short note. Once it's accepted, you both see each other's full address, contact and directions (Google Maps or Apple Maps).
 - **Community board.**
@@ -20,12 +21,12 @@ Works in any phone or computer browser. Nothing to install.
   - Events have a date, a place, an optional pin on the map and an "I'm going" button.
 - **Notifications.** The bell shows connection requests, answers, and who's going to your events.
 - **Suggest an idea.** Send ideas or problems straight to the admins.
-- **Leave any time.** Deleting your account removes your flag, details, posts and connections right away.
+- **Leave any time.** Deleting your account removes your details right away. If others are in your family, the flag stays with them.
 
 ## Privacy
 
 - Only logged-in members can see the map.
-- Everyone on the map sees your family name, street and postcode, and the details you chose to share.
+- Everyone on the map sees your family name, its members' first names, your street and postcode, and the details you chose to share.
 - Exact location, full address and contact: for each one, you choose between everyone and only families you've connected with.
 - If you hide your exact location, your flag is moved about 50 m away and house numbers are hidden on the map.
 - Admins can see all details so they can keep the map safe and tidy. Everyone can see who the admins are.
